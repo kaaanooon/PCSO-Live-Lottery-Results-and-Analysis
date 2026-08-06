@@ -1,0 +1,86 @@
+import { Platform, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import {
+  BannerAd,
+  BannerAdSize,
+  TestIds,
+} from 'react-native-google-mobile-ads';
+
+import { useAds } from '@/providers/ads-context';
+import { useAppTheme } from '@/providers/preferences-provider';
+
+export interface BannerAdProps {
+  readonly style?: StyleProp<ViewStyle>;
+}
+
+interface NativeBannerProps extends BannerAdProps {
+  readonly unitId: string;
+}
+
+function productionOrTestId(value: string | undefined): string {
+  const candidate = value?.trim();
+  return !__DEV__ && candidate?.startsWith('ca-app-pub-')
+    ? candidate
+    : TestIds.ADAPTIVE_BANNER;
+}
+
+const TOP_BANNER_UNIT_ID = productionOrTestId(
+  Platform.select({
+    android: process.env.EXPO_PUBLIC_ADMOB_BANNER_TOP_ANDROID_ID,
+    ios: process.env.EXPO_PUBLIC_ADMOB_BANNER_TOP_IOS_ID,
+  }) ?? process.env.EXPO_PUBLIC_ADMOB_BANNER_TOP_ID,
+);
+const BOTTOM_BANNER_UNIT_ID = productionOrTestId(
+  Platform.select({
+    android: process.env.EXPO_PUBLIC_ADMOB_BANNER_BOTTOM_ANDROID_ID,
+    ios: process.env.EXPO_PUBLIC_ADMOB_BANNER_BOTTOM_IOS_ID,
+  }) ?? process.env.EXPO_PUBLIC_ADMOB_BANNER_BOTTOM_ID,
+);
+
+function NativeBanner({ style, unitId }: NativeBannerProps) {
+  const { adsEnabled } = useAds();
+  const { colors } = useAppTheme();
+  if (!adsEnabled) return null;
+
+  return (
+    <View
+      accessibilityLabel="Advertisement"
+      style={[
+        styles.container,
+        { backgroundColor: colors.surface, borderColor: colors.border },
+        style,
+      ]}>
+      <Text style={[styles.label, { color: colors.textMuted }]}>ADVERTISEMENT</Text>
+      <BannerAd
+        unitId={unitId}
+        size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
+      />
+    </View>
+  );
+}
+
+export function TopBannerAd(props: BannerAdProps) {
+  return <NativeBanner {...props} unitId={TOP_BANNER_UNIT_ID} />;
+}
+
+export function BottomBannerAd(props: BannerAdProps) {
+  return <NativeBanner {...props} unitId={BOTTOM_BANNER_UNIT_ID} />;
+}
+
+const styles = StyleSheet.create({
+  container: {
+    alignItems: 'center',
+    alignSelf: 'stretch',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    justifyContent: 'center',
+    overflow: 'hidden',
+    paddingTop: 3,
+  },
+  label: {
+    fontSize: 8,
+    fontWeight: '700',
+    letterSpacing: 0.7,
+    lineHeight: 10,
+    marginBottom: 1,
+  },
+});
