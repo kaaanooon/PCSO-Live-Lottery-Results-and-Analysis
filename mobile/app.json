@@ -15,7 +15,7 @@
       "package": "com.lottolens.ph",
       "adaptiveIcon": {
         "backgroundColor": "#002856",
-        "foregroundImage": "./assets/images/lotto-live-app-icon.png"
+        "foregroundImage": "./assets/images/lotto-live-logo-transparent.png"
       },
       "predictiveBackGestureEnabled": false
     },
@@ -29,7 +29,7 @@
         "expo-splash-screen",
         {
           "backgroundColor": "#002856",
-          "image": "./assets/images/lotto-live-app-icon.png",
+          "image": "./assets/images/lotto-live-logo-transparent.png",
           "imageWidth": 96
         }
       ],
