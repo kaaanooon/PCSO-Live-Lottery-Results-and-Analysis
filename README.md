@@ -68,7 +68,7 @@ CSV and JSON draw records contain exactly:
 
 Winning numbers remain strings so leading zeroes are preserved.
 
-## Statistical analysis (no machine learning)
+## Statistical analysis
 
 Generate a mobile-friendly HTML report plus auditable JSON and per-game CSV tables from the draw archive. With no date arguments, the analyzer uses the latest five draws **for each logical game** so the first report is quick to build:
 
