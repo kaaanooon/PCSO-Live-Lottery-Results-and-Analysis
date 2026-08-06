@@ -1,0 +1,6 @@
+rank,strategy,combination,numbers,even_count,odd_count,low_count,high_count,sum,unique_values,historical_fit_score,seen_before_count,rambolito_key,straight_permutations,theoretical_odds_1_in,note
+1,Uniform baseline,897958,"['8', '9', '7', '9', '5', '8']",2,4,0,6,46,4,36.17,0,,,1000000,"Historical fit is descriptive, not a win probability."
+2,Uniform baseline,226566,"['2', '2', '6', '5', '6', '6']",5,1,2,4,27,3,56.35,0,,,1000000,"Historical fit is descriptive, not a win probability."
+3,Smoothed frequency,016797,"['0', '1', '6', '7', '9', '7']",2,4,2,4,30,5,92.89,0,,,1000000,"Historical fit is descriptive, not a win probability."
+4,Smoothed frequency,556184,"['5', '5', '6', '1', '8', '4']",3,3,2,4,29,5,89.79,0,,,1000000,"Historical fit is descriptive, not a win probability."
+5,Historical profile,057764,"['0', '5', '7', '7', '6', '4']",3,3,2,4,29,5,91.74,0,,,1000000,"Historical fit is descriptive, not a win probability."

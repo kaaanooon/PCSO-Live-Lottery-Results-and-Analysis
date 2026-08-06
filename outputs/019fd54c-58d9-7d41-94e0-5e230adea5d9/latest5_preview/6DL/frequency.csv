@@ -1,0 +1,11 @@
+number,numeric_value,appearance_count,appearance_share_pct,draw_hit_count,draw_hit_rate_pct,expected_count,difference_from_expected,z_score,seen_in_selected_sample,draws_since_last,draws_since_last_in_sample,mean_gap_draws,median_gap_draws,maximum_gap_draws,last_seen,frequency_rank,temperature
+0,0,4,13.3333,3,60.0,3.0,1.0,0.609,True,0,0,0,0.0,0,2026-08-04,2,Middle
+1,1,2,6.6667,2,40.0,3.0,-1.0,-0.609,True,2,2,1,1,1,2026-07-30,6,Sample cold
+2,2,2,6.6667,2,40.0,3.0,-1.0,-0.609,True,3,3,0,0,0,2026-07-28,7,Sample cold
+3,3,2,6.6667,2,40.0,3.0,-1.0,-0.609,True,1,1,2,2,2,2026-08-01,8,Sample cold
+4,4,2,6.6667,2,40.0,3.0,-1.0,-0.609,True,0,0,2,2,2,2026-08-04,9,Sample cold
+5,5,4,13.3333,4,80.0,3.0,1.0,0.609,True,0,0,0,0,0,2026-08-04,3,Middle
+6,6,4,13.3333,3,60.0,3.0,1.0,0.609,True,1,1,0.5,0.5,1,2026-08-01,4,Middle
+7,7,3,10.0,3,60.0,3.0,0.0,0.0,True,0,0,0.5,0.5,1,2026-08-04,5,Middle
+8,8,2,6.6667,2,40.0,3.0,-1.0,-0.609,True,3,3,0,0,0,2026-07-28,10,Sample cold
+9,9,5,16.6667,4,80.0,3.0,2.0,1.217,True,0,0,0,0,0,2026-08-04,1,Sample hot

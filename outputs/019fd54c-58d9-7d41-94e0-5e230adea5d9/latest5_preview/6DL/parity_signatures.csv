@@ -1,0 +1,6 @@
+signature,draw_count,observed_pct
+E-E-E-O-E-O,1,20.0
+E-O-E-E-O-O,1,20.0
+E-O-E-O-O-E,1,20.0
+E-O-O-O-E-O,1,20.0
+O-E-E-O-O-O,1,20.0

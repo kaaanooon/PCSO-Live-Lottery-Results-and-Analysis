@@ -1,0 +1,11 @@
+rank,strategy,combination,numbers,even_count,odd_count,low_count,high_count,sum,unique_values,historical_fit_score,seen_before_count,rambolito_key,straight_permutations,theoretical_odds_1_in,note
+1,Uniform baseline,19-23,"['19', '23']",0,2,0,2,42,2,59.61,1,19-23,2,961,"Historical fit is descriptive, not a win probability."
+2,Uniform baseline,07-22,"['07', '22']",1,1,1,1,29,2,81.75,1,07-22,2,961,"Historical fit is descriptive, not a win probability."
+3,Uniform baseline,03-22,"['03', '22']",1,1,1,1,25,2,79.87,2,03-22,2,961,"Historical fit is descriptive, not a win probability."
+4,Uniform baseline,16-20,"['16', '20']",2,0,1,1,36,2,70.49,1,16-20,2,961,"Historical fit is descriptive, not a win probability."
+5,Smoothed frequency,19-16,"['19', '16']",1,1,1,1,35,2,85.4,5,16-19,2,961,"Historical fit is descriptive, not a win probability."
+6,Smoothed frequency,28-07,"['28', '07']",1,1,1,1,35,2,84.48,8,07-28,2,961,"Historical fit is descriptive, not a win probability."
+7,Smoothed frequency,11-20,"['11', '20']",1,1,1,1,31,2,84.27,3,11-20,2,961,"Historical fit is descriptive, not a win probability."
+8,Historical profile,28-03,"['28', '03']",1,1,1,1,31,2,83.86,4,03-28,2,961,"Historical fit is descriptive, not a win probability."
+9,Historical profile,09-24,"['09', '24']",1,1,1,1,33,2,83.76,3,09-24,2,961,"Historical fit is descriptive, not a win probability."
+10,Historical profile,12-21,"['12', '21']",1,1,1,1,33,2,83.76,4,12-21,2,961,"Historical fit is descriptive, not a win probability."

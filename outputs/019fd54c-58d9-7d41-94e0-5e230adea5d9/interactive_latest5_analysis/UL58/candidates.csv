@@ -1,0 +1,11 @@
+rank,strategy,combination,numbers,even_count,odd_count,low_count,high_count,sum,unique_values,historical_fit_score,seen_before_count,rambolito_key,straight_permutations,theoretical_odds_1_in,odds_scope,note
+1,Uniform baseline,03-07-12-20-40-48,"['03', '07', '12', '20', '40', '48']",4,2,4,2,130,6,56.84,0,,,40475358,Standard game,"Historical fit is descriptive, not a win probability."
+2,Uniform baseline,04-21-30-45-48-56,"['04', '21', '30', '45', '48', '56']",4,2,2,4,204,6,68.31,0,,,40475358,Standard game,"Historical fit is descriptive, not a win probability."
+3,Uniform baseline,04-06-10-19-27-41,"['04', '06', '10', '19', '27', '41']",3,3,5,1,107,6,37.35,0,,,40475358,Standard game,"Historical fit is descriptive, not a win probability."
+4,Uniform baseline,03-12-22-40-53-57,"['03', '12', '22', '40', '53', '57']",3,3,3,3,187,6,66.0,0,,,40475358,Standard game,"Historical fit is descriptive, not a win probability."
+5,Smoothed frequency,07-16-26-30-36-55,"['07', '16', '26', '30', '36', '55']",4,2,3,3,170,6,89.66,0,,,40475358,Standard game,"Historical fit is descriptive, not a win probability."
+6,Smoothed frequency,09-11-14-33-34-55,"['09', '11', '14', '33', '34', '55']",2,4,3,3,156,6,89.02,0,,,40475358,Standard game,"Historical fit is descriptive, not a win probability."
+7,Smoothed frequency,07-19-23-38-50-55,"['07', '19', '23', '38', '50', '55']",2,4,3,3,192,6,88.8,0,,,40475358,Standard game,"Historical fit is descriptive, not a win probability."
+8,Historical profile,07-14-23-34-48-54,"['07', '14', '23', '34', '48', '54']",4,2,3,3,180,6,90.03,0,,,40475358,Standard game,"Historical fit is descriptive, not a win probability."
+9,Historical profile,11-14-24-34-41-50,"['11', '14', '24', '34', '41', '50']",4,2,3,3,174,6,89.89,0,,,40475358,Standard game,"Historical fit is descriptive, not a win probability."
+10,Historical profile,11-24-28-33-35-41,"['11', '24', '28', '33', '35', '41']",2,4,3,3,172,6,89.77,0,,,40475358,Standard game,"Historical fit is descriptive, not a win probability."

@@ -1,0 +1,5 @@
+pattern,even_count,odd_count,draw_count,observed_pct,theoretical_pct
+0E-3O,0,3,314,12.6257,12.5
+1E-2O,1,2,895,35.9871,37.5
+2E-1O,2,1,961,38.6409,37.5
+3E-0O,3,0,317,12.7463,12.5

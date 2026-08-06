@@ -1,0 +1,4 @@
+pattern,low_count,high_count,draw_count,observed_pct
+3L-3H,3,3,2,40.0
+4L-2H,4,2,2,40.0
+6L-0H,6,0,1,20.0

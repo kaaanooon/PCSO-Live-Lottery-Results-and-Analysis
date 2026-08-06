@@ -1,0 +1,6 @@
+draw_index,game_code,draw_date,draw_time,combination,sum,mean,minimum,maximum,span,even_count,odd_count,low_count,high_count,unique_values,adjacent_consecutive_pairs,shared_values_with_previous_draw,shared_distinct_values_with_previous_draw,exact_position_repeats_with_previous_draw
+1,6DL,2026-07-25,21:00,626183,26,4.333,1,8,7,4,2,3,3,5,0,,,
+2,6DL,2026-07-28,21:00,258794,35,5.833,2,9,7,3,3,2,4,6,1,2,2,0
+3,6DL,2026-07-30,21:00,095761,28,4.667,0,9,9,2,4,2,4,6,1,3,3,1
+4,6DL,2026-08-01,21:00,906359,32,5.333,0,9,9,2,4,2,4,5,0,4,4,0
+5,6DL,2026-08-04,21:00,050497,25,4.167,0,9,9,3,3,3,3,5,0,3,3,0

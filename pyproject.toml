@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "philippine-lottery-picker"
+version = "0.3.0"
+description = "Fetch Philippine lottery results from LottoMatik"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "httpx>=0.27,<1",
+  "tzdata>=2025.2; platform_system == 'Windows'",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.3,<10"]
+
+[project.scripts]
+lottery-picker = "lottery_picker.cli:main"
+lottery-analysis = "lottery_picker.analysis_cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
