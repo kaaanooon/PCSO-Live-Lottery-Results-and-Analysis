@@ -9,6 +9,7 @@ import {
 import type {
   DrawGameCode,
   DrawSlot,
+  GameRule,
   GameResultPage,
   HistoricalCrossCheckOptions,
   HistoricalCrossCheckSummary,
@@ -31,6 +32,30 @@ export interface DrawFilterOptions {
 }
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Generate a uniform pick without using draw history or analysis weights. */
+export function generateRandomCombination(rule: GameRule): number[] {
+  const domain = Array.from(
+    { length: rule.maximum - rule.minimum + 1 },
+    (_, index) => rule.minimum + index,
+  );
+
+  if (rule.repeatsAllowed) {
+    return Array.from(
+      { length: rule.pickCount },
+      () => domain[Math.floor(Math.random() * domain.length)]!,
+    );
+  }
+
+  const available = [...domain];
+  const selected: number[] = [];
+  while (selected.length < rule.pickCount) {
+    const index = Math.floor(Math.random() * available.length);
+    selected.push(available[index]!);
+    available.splice(index, 1);
+  }
+  return rule.ordered ? selected : selected.sort((left, right) => left - right);
+}
 
 /** Return every validation problem so one edit can fix several fields. */
 export function validatePick(

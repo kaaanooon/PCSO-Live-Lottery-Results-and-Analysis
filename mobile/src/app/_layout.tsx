@@ -5,6 +5,7 @@ import { AdsProvider } from '@/providers/ads-provider';
 import { DrawsProvider } from '@/providers/draws-provider';
 import { ResultRemindersProvider } from '@/providers/notifications-provider';
 import { PreferencesProvider, useAppTheme } from '@/providers/preferences-provider';
+import { PurchasesProvider } from '@/providers/purchases-provider';
 
 function AppNavigator() {
   const { colors, isDark } = useAppTheme();
@@ -21,13 +22,15 @@ function AppNavigator() {
 export default function RootLayout() {
   return (
     <PreferencesProvider>
-      <ResultRemindersProvider>
-        <AdsProvider>
-          <DrawsProvider>
-            <AppNavigator />
-          </DrawsProvider>
-        </AdsProvider>
-      </ResultRemindersProvider>
+      <PurchasesProvider>
+        <ResultRemindersProvider>
+          <AdsProvider>
+            <DrawsProvider>
+              <AppNavigator />
+            </DrawsProvider>
+          </AdsProvider>
+        </ResultRemindersProvider>
+      </PurchasesProvider>
     </PreferencesProvider>
   );
 }

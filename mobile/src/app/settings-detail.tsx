@@ -1,14 +1,15 @@
 import Constants from 'expo-constants';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, type ReactNode } from 'react';
-import { StyleSheet, Switch, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
+import { ActionButton } from '@/components/action-button';
 import { SettingsPage } from '@/components/settings-page';
 import {
   useAppTheme,
-  usePreferences,
   type AppThemeColors,
 } from '@/providers/preferences-provider';
+import { usePurchases } from '@/providers/purchases-context';
 import { radius, spacing } from '@/theme/tokens';
 
 type DetailSection = 'disclaimer' | 'remove-ads' | 'privacy' | 'about';
@@ -85,42 +86,74 @@ function DisclaimerContent() {
 
 function RemoveAdsContent() {
   const { colors } = useAppTheme();
-  const { adsRemoved, setAdsRemoved, ready } = usePreferences();
+  const {
+    adsRemoved,
+    canPurchase,
+    message,
+    purchasing,
+    ready,
+    restoring,
+    status,
+    storePrice,
+    purchaseRemoveAds,
+    restoreRemoveAds,
+  } = usePurchases();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const displayedPrice = storePrice ?? '₱49';
+  const purchaseLabel = adsRemoved
+    ? 'Ads removed'
+    : purchasing
+      ? 'Opening Google Play…'
+      : `Remove ads · ${displayedPrice}`;
 
   return (
     <>
-      <InfoCard title="Hide ads in this pre-release">
+      <InfoCard title={adsRemoved ? 'Ad-free access is active' : 'One-time ad-free upgrade'}>
         <Paragraph>
-          Use the free preference below to hide banner, card, bottom-anchored, and full-screen advertisements throughout this pre-release version of PCSO Live Lotto Results and Analysis.
+          {adsRemoved
+            ? 'Banner, card, bottom-anchored, and full-screen advertisements are removed throughout the app.'
+            : `Pay ${displayedPrice} once through Google Play to permanently remove banner, card, bottom-anchored, and full-screen advertisements. This is not a subscription.`}
         </Paragraph>
         <Paragraph>
-          The setting is saved only on this device. Billing has not been implemented, so changing it does not charge you, create a store purchase, or unlock paid content.
+          The final localized price and payment method are shown by Google Play before you confirm. The purchase belongs to the Google account used at checkout and can be restored after reinstalling the app.
         </Paragraph>
       </InfoCard>
       <View style={styles.preferenceCard}>
         <View style={styles.preferenceCopy}>
-          <Text style={styles.preferenceTitle}>Prefer an ad-free experience</Text>
+          <Text style={styles.preferenceTitle}>
+            {adsRemoved ? 'Thank you for supporting the app' : 'Lifetime ad removal'}
+          </Text>
           <Text style={styles.preferenceText}>
-            {ready
-              ? (adsRemoved ? 'Advertisements are hidden.' : 'Advertisements are shown.')
-              : 'Loading saved preference…'}
+            {!ready
+              ? 'Checking Google Play…'
+              : adsRemoved
+                ? 'Google Play purchase active'
+                : status === 'pending'
+                  ? 'Waiting for payment confirmation'
+                  : 'One payment, no recurring charge'}
           </Text>
         </View>
-        <Switch
-          accessibilityLabel="Prefer an ad-free experience"
-          accessibilityHint="Hides or shows advertisements without making a purchase"
-          accessibilityState={{ disabled: !ready, checked: adsRemoved }}
-          disabled={!ready}
-          ios_backgroundColor={colors.border}
-          onValueChange={setAdsRemoved}
-          thumbColor="#FFFFFF"
-          trackColor={{ false: colors.border, true: colors.primary }}
-          value={adsRemoved}
-        />
       </View>
+      <ActionButton
+        accessibilityLabel={adsRemoved ? 'Advertisements removed' : `Remove ads for ${displayedPrice}`}
+        disabled={!canPurchase || adsRemoved}
+        icon={adsRemoved ? 'checkmark-circle' : 'card-outline'}
+        label={purchaseLabel}
+        onPress={() => void purchaseRemoveAds()}
+        style={styles.purchaseButton}
+      />
+      {!adsRemoved ? (
+        <ActionButton
+          disabled={!ready || purchasing || restoring}
+          icon="refresh-outline"
+          label={restoring ? 'Checking purchases…' : 'Restore purchase'}
+          onPress={() => void restoreRemoveAds()}
+          style={styles.purchaseButton}
+          variant="secondary"
+        />
+      ) : null}
       <Text style={styles.note}>
-        This free pre-release option may change before the public store release. Any future paid option must show its price and store purchase flow before charging you.
+        {message ?? 'Google Play handles payment information. The app does not receive your card or wallet details.'}
       </Text>
     </>
   );
@@ -136,7 +169,7 @@ function PrivacyContent() {
       </InfoCard>
       <InfoCard title="Data kept on your device">
         <Bullet>Saved lottery picks and their play settings.</Bullet>
-        <Bullet>Appearance, selected-game, ad-display, and result-reminder preferences.</Bullet>
+        <Bullet>Appearance, selected-game, result-reminder, and cached ad-free entitlement state.</Bullet>
         <Bullet>Cached result records and the last successful result refresh time.</Bullet>
         <Paragraph>
           These records use the app’s local device storage. The current app does not create an account or send saved picks and preferences to a developer-operated server.
@@ -160,11 +193,18 @@ function PrivacyContent() {
           The app uses Google Mobile Ads to request, display, and measure advertisements. Google and its advertising partners may receive ordinary connection and device information such as your IP address, device or advertising identifiers, app interactions, diagnostics, and ad impressions or clicks, subject to your consent choices, device settings, location, and their own privacy practices.
         </Paragraph>
         <Paragraph>
-          Where required, the app asks for an advertising consent choice before requesting ads. You can also hide ads with the free pre-release Remove ads preference, though data already sent by a previously loaded ad cannot be recalled.
+          Where required, the app asks for an advertising consent choice before requesting ads. A verified Google Play ad-free purchase prevents future ad requests, though data already sent by a previously loaded ad cannot be recalled.
         </Paragraph>
       </InfoCard>
+      <InfoCard title="Payments">
+        <Paragraph>
+          Google Play processes the optional one-time Remove ads purchase. The app receives product, purchase-status, and entitlement information needed to complete and restore that purchase, but does not receive your full payment-card or wallet details.
+        </Paragraph>
+        <Bullet>No subscription or recurring charge.</Bullet>
+        <Bullet>No developer-operated user account or payment processor.</Bullet>
+      </InfoCard>
       <InfoCard title="Other services not included now">
-        <Bullet>No developer-added analytics, user account, payment, or subscription system.</Bullet>
+        <Bullet>No developer-added analytics or user account system.</Bullet>
         <Bullet>No request for contacts, location, camera, microphone, or photo-library access.</Bullet>
       </InfoCard>
       <InfoCard title="Your choices">
@@ -194,6 +234,7 @@ function AboutContent() {
         <Bullet>Expo Router — MIT License</Bullet>
         <Bullet>React Native Async Storage — MIT License</Bullet>
         <Bullet>React Native Google Mobile Ads — Apache License 2.0</Bullet>
+        <Bullet>Expo IAP and OpenIAP — MIT License</Bullet>
         <Bullet>Expo Notifications — MIT License</Bullet>
         <Bullet>Ionicons and Expo Vector Icons — MIT License</Bullet>
         <Paragraph>
@@ -263,6 +304,7 @@ function makeStyles(colors: AppThemeColors) {
     preferenceCopy: { flex: 1, minWidth: 0 },
     preferenceTitle: { color: colors.text, fontSize: 14, lineHeight: 19, fontWeight: '900' },
     preferenceText: { marginTop: 3, color: colors.textMuted, fontSize: 11, lineHeight: 16 },
+    purchaseButton: { width: '100%' },
     note: {
       paddingHorizontal: spacing.sm,
       color: colors.textMuted,

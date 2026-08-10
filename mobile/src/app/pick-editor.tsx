@@ -12,9 +12,9 @@ import { Screen } from '@/components/screen';
 import { SectionCard } from '@/components/section-card';
 import { SegmentedControl } from '@/components/segmented-control';
 import { GAME_BY_CODE, formatNumber } from '@/domain/games';
-import { parsePick, sortDrawsNewestFirst } from '@/domain/picks';
+import { generateRandomCombination, parsePick, sortDrawsNewestFirst } from '@/domain/picks';
 import { restoreSavedPicks, type SavedPick } from '@/domain/saved-picks';
-import type { DrawGameCode, GameRule, LogicalGameCode, MatchMode } from '@/domain/types';
+import type { DrawGameCode, LogicalGameCode, MatchMode } from '@/domain/types';
 import { useDraws } from '@/providers/draws-provider';
 import { useAppTheme } from '@/providers/preferences-provider';
 import { palette, radius, spacing } from '@/theme/tokens';
@@ -28,28 +28,6 @@ interface HeatmapValue {
   readonly value: number;
   readonly count: number;
   readonly band: HeatBand;
-}
-
-function generateUniformCombination(rule: GameRule): number[] {
-  const domain = Array.from(
-    { length: rule.maximum - rule.minimum + 1 },
-    (_, index) => rule.minimum + index,
-  );
-  if (rule.repeatsAllowed) {
-    return Array.from(
-      { length: rule.pickCount },
-      () => domain[Math.floor(Math.random() * domain.length)]!,
-    );
-  }
-
-  const available = [...domain];
-  const selected: number[] = [];
-  while (selected.length < rule.pickCount) {
-    const index = Math.floor(Math.random() * available.length);
-    selected.push(available[index]!);
-    available.splice(index, 1);
-  }
-  return rule.ordered ? selected : selected.sort((left, right) => left - right);
 }
 
 function frequencyBand(count: number, minimum: number, maximum: number): HeatBand {
@@ -216,12 +194,12 @@ export default function PickEditorScreen() {
   ];
 
   const generatePick = () => {
-    let numbers = generateUniformCombination(rule);
+    let numbers = generateRandomCombination(rule);
     while (
       (mode === 'rambolito' || mode === 'perm') &&
       new Set(numbers).size === 1
     ) {
-      numbers = generateUniformCombination(rule);
+      numbers = generateRandomCombination(rule);
     }
     setInputs(numbers.map(String));
     setEditorError(null);

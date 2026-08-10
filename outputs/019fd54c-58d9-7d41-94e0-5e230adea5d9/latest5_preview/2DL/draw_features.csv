@@ -1,6 +1,0 @@
-draw_index,game_code,draw_date,draw_time,combination,sum,mean,minimum,maximum,span,even_count,odd_count,low_count,high_count,unique_values,adjacent_consecutive_pairs,shared_values_with_previous_draw,shared_distinct_values_with_previous_draw,exact_position_repeats_with_previous_draw
-1,2DL-5PM,2026-08-04,17:00,10-28,38,19,10,28,18,2,0,1,1,2,0,,,
-2,2DL-9PM,2026-08-04,21:00,19-17,36,18,17,19,2,0,2,0,2,2,0,0,0,0
-3,2DL-2PM,2026-08-05,14:00,20-23,43,21.5,20,23,3,1,1,0,2,2,0,0,0,0
-4,2DL-5PM,2026-08-05,17:00,13-18,31,15.5,13,18,5,1,1,1,1,2,0,0,0,0
-5,2DL-9PM,2026-08-05,21:00,21-02,23,11.5,2,21,19,1,1,1,1,2,0,0,0,0

@@ -15,15 +15,13 @@ import type { LogicalGameCode } from '@/domain/types';
 import { palette } from '@/theme/tokens';
 
 const STORAGE_KEY = '@lottolens-ph/preferences/v1';
-const STORAGE_VERSION = 2;
+const STORAGE_VERSION = 3;
 
 export interface PreferencesContextValue {
   readonly isDark: boolean;
   readonly toggleDarkMode: () => void;
   readonly enabledGames: readonly LogicalGameCode[];
   readonly setGameEnabled: (code: LogicalGameCode, enabled: boolean) => void;
-  readonly adsRemoved: boolean;
-  readonly setAdsRemoved: (removed: boolean) => void;
   readonly resultRemindersEnabled: boolean;
   readonly setResultRemindersEnabled: (enabled: boolean) => void;
   readonly ready: boolean;
@@ -44,10 +42,9 @@ export interface AppThemeColors {
 }
 
 interface StoredPreferences {
-  readonly version: 2;
+  readonly version: 3;
   readonly isDark: boolean;
   readonly enabledGames: readonly LogicalGameCode[];
-  readonly adsRemoved: boolean;
   readonly resultRemindersEnabled: boolean;
 }
 
@@ -99,7 +96,6 @@ function restoreEnabledGames(value: unknown): readonly LogicalGameCode[] | null 
 export function PreferencesProvider({ children }: PropsWithChildren) {
   const [isDark, setIsDark] = useState(false);
   const [enabledGames, setEnabledGames] = useState<readonly LogicalGameCode[]>(GAME_CODES);
-  const [adsRemoved, setAdsRemovedState] = useState(false);
   const [resultRemindersEnabled, setResultRemindersEnabledState] = useState(true);
   const [ready, setReady] = useState(false);
   const persistenceQueue = useRef<Promise<void>>(Promise.resolve());
@@ -112,13 +108,16 @@ export function PreferencesProvider({ children }: PropsWithChildren) {
         const candidate: unknown = JSON.parse(serialized);
         if (
           !isRecord(candidate) ||
-          (candidate.version !== 1 && candidate.version !== STORAGE_VERSION)
+          (candidate.version !== 1 &&
+            candidate.version !== 2 &&
+            candidate.version !== STORAGE_VERSION)
         ) return;
 
         if (typeof candidate.isDark === 'boolean') setIsDark(candidate.isDark);
         const restoredGames = restoreEnabledGames(candidate.enabledGames);
         if (restoredGames) setEnabledGames(restoredGames);
-        if (typeof candidate.adsRemoved === 'boolean') setAdsRemovedState(candidate.adsRemoved);
+        // Versions 1 and 2 exposed a free ad toggle. It is intentionally ignored instead
+        // of being migrated into the paid Google Play entitlement.
         // Version 1 did not include reminders. Missing values intentionally migrate to on.
         if (typeof candidate.resultRemindersEnabled === 'boolean') {
           setResultRemindersEnabledState(candidate.resultRemindersEnabled);
@@ -141,12 +140,11 @@ export function PreferencesProvider({ children }: PropsWithChildren) {
       version: STORAGE_VERSION,
       isDark,
       enabledGames,
-      adsRemoved,
       resultRemindersEnabled,
     };
     const write = () => AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
     persistenceQueue.current = persistenceQueue.current.then(write, write).catch(() => {});
-  }, [adsRemoved, enabledGames, isDark, ready, resultRemindersEnabled]);
+  }, [enabledGames, isDark, ready, resultRemindersEnabled]);
 
   const toggleDarkMode = useCallback(() => setIsDark((value) => !value), []);
   const setGameEnabled = useCallback((code: LogicalGameCode, enabled: boolean) => {
@@ -157,7 +155,6 @@ export function PreferencesProvider({ children }: PropsWithChildren) {
       return GAME_CODES.filter((gameCode) => selected.has(gameCode));
     });
   }, []);
-  const setAdsRemoved = useCallback((removed: boolean) => setAdsRemovedState(removed), []);
   const setResultRemindersEnabled = useCallback(
     (enabled: boolean) => setResultRemindersEnabledState(enabled),
     [],
@@ -169,19 +166,15 @@ export function PreferencesProvider({ children }: PropsWithChildren) {
       toggleDarkMode,
       enabledGames,
       setGameEnabled,
-      adsRemoved,
-      setAdsRemoved,
       resultRemindersEnabled,
       setResultRemindersEnabled,
       ready,
     }),
     [
-      adsRemoved,
       enabledGames,
       isDark,
       ready,
       resultRemindersEnabled,
-      setAdsRemoved,
       setGameEnabled,
       setResultRemindersEnabled,
       toggleDarkMode,

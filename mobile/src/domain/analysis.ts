@@ -690,9 +690,8 @@ const emptyAnalysis = (rule: GameRule): GameAnalysis => {
 };
 
 /**
- * Analyze the caller-selected sample. The caller may supply latest 1–5 draws
- * or an inclusive date-filtered set; this function intentionally does not
- * impose another date/sample filter.
+ * Analyze the caller-selected sample. The caller chooses and orders the draw
+ * records; this function intentionally does not impose a range filter.
  */
 export function analyzeGame(
   inputDraws: readonly Draw[],

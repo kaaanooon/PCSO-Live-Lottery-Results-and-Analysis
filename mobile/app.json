@@ -12,7 +12,7 @@
       "icon": "./assets/images/lotto-live-app-icon.png"
     },
     "android": {
-      "package": "com.lottolens.ph",
+      "package": "com.kanonsoft.lottoresultsph",
       "adaptiveIcon": {
         "backgroundColor": "#002856",
         "foregroundImage": "./assets/images/lotto-live-logo-transparent.png"
@@ -44,12 +44,21 @@
       [
         "react-native-google-mobile-ads",
         {
-          "androidAppId": "ca-app-pub-3940256099942544~3347511713",
+          "androidAppId": "ca-app-pub-8609264579208618~4357693731",
           "iosAppId": "ca-app-pub-3940256099942544~1458002511",
           "delayAppMeasurementInit": true,
           "optimizeInitialization": true,
           "optimizeAdLoading": true,
           "userTrackingUsageDescription": "This identifier may be used to deliver and measure ads that help support the app."
+        }
+      ],
+      "expo-iap",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "kotlinVersion": "2.2.0"
+          }
         }
       ]
     ],

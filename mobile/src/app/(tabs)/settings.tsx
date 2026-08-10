@@ -10,6 +10,7 @@ import {
   usePreferences,
   type AppThemeColors,
 } from '@/providers/preferences-provider';
+import { usePurchases } from '@/providers/purchases-context';
 import { radius, spacing } from '@/theme/tokens';
 
 type IconName = ComponentProps<typeof Ionicons>['name'];
@@ -61,9 +62,14 @@ export default function SettingsScreen() {
     isDark,
     toggleDarkMode,
     enabledGames,
-    adsRemoved,
-    ready,
+    ready: preferencesReady,
   } = usePreferences();
+  const {
+    adsRemoved,
+    ready: purchasesReady,
+    status: purchaseStatus,
+    storePrice,
+  } = usePurchases();
   const {
     available: remindersAvailable,
     status: reminderStatus,
@@ -144,14 +150,14 @@ export default function SettingsScreen() {
           <View style={styles.rowCopy}>
             <Text style={styles.rowTitle}>Dark mode</Text>
             <Text style={styles.rowSubtitle}>
-              {ready ? (isDark ? 'Using the dark appearance' : 'Using the light appearance') : 'Loading saved preference…'}
+              {preferencesReady ? (isDark ? 'Using the dark appearance' : 'Using the light appearance') : 'Loading saved preference…'}
             </Text>
           </View>
           <Switch
             accessibilityLabel="Dark mode"
             accessibilityHint="Changes the app appearance"
-            accessibilityState={{ disabled: !ready, checked: isDark }}
-            disabled={!ready}
+            accessibilityState={{ disabled: !preferencesReady, checked: isDark }}
+            disabled={!preferencesReady}
             ios_backgroundColor={colors.border}
             onValueChange={() => toggleDarkMode()}
             thumbColor="#FFFFFF"
@@ -209,7 +215,15 @@ export default function SettingsScreen() {
         <SettingsRow
           icon="remove-circle-outline"
           title="Remove ads"
-          subtitle={adsRemoved ? 'Advertisements are hidden' : 'Advertisements are shown'}
+          subtitle={
+            adsRemoved
+              ? 'Ad-free purchase active'
+              : !purchasesReady
+                ? 'Checking Google Play…'
+                : purchaseStatus === 'pending'
+                  ? 'Payment confirmation pending'
+                  : `One-time purchase${storePrice ? ` · ${storePrice}` : ' · ₱49'}`
+          }
           onPress={() => router.push({ pathname: '/settings-detail', params: { section: 'remove-ads' } })}
         />
         <SettingsRow

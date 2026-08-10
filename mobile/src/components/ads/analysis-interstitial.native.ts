@@ -10,7 +10,7 @@ import { useAds } from '@/providers/ads-context';
 
 import type { AnalysisInterstitialController } from './analysis-interstitial';
 
-const ACTIONS_PER_INTERSTITIAL = 3;
+const ACTIONS_PER_INTERSTITIAL = 2;
 
 function analysisInterstitialUnitId(): string {
   const configured = Platform.select({
@@ -23,7 +23,7 @@ function analysisInterstitialUnitId(): string {
 }
 
 /**
- * Preloads one interstitial and shows it at most once per three valid Analyze
+ * Preloads one interstitial and shows it at most once per two valid Analyze
  * actions. Analysis always continues immediately when an ad is unavailable.
  */
 export function useAnalysisInterstitial(): AnalysisInterstitialController {
@@ -44,7 +44,6 @@ export function useAnalysisInterstitial(): AnalysisInterstitialController {
 
   useEffect(() => {
     if (!adsEnabled) {
-      setLoaded(false);
       finishPendingAnalysis();
       return;
     }

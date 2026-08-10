@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 
 import { useAds } from '@/providers/ads-context';
-import { useAppTheme, usePreferences } from '@/providers/preferences-provider';
+import { useAppTheme } from '@/providers/preferences-provider';
 import { radius, shadow, spacing } from '@/theme/tokens';
 
 export interface ResultAdCardProps {
@@ -11,10 +11,9 @@ export interface ResultAdCardProps {
 /** Responsive localhost preview. Native builds replace this file with the SDK-backed card. */
 export function ResultAdCard({ placement = 'results' }: ResultAdCardProps) {
   const { ready, adsEnabled } = useAds();
-  const { adsRemoved } = usePreferences();
   const { colors } = useAppTheme();
 
-  if (!ready || !adsEnabled || adsRemoved) return null;
+  if (!ready || !adsEnabled) return null;
 
   return (
     <View

@@ -10,7 +10,7 @@ import {
 } from 'react-native-google-mobile-ads';
 
 import { useAds } from '@/providers/ads-context';
-import { useAppTheme, usePreferences } from '@/providers/preferences-provider';
+import { useAppTheme } from '@/providers/preferences-provider';
 import { radius, shadow, spacing } from '@/theme/tokens';
 
 export interface ResultAdCardProps {
@@ -41,16 +41,14 @@ function unitIdFor(placement: NonNullable<ResultAdCardProps['placement']>): stri
 
 export function ResultAdCard({ placement = 'results' }: ResultAdCardProps) {
   const { ready, canRequestAds, adsEnabled } = useAds();
-  const { adsRemoved } = usePreferences();
   const { colors, isDark } = useAppTheme();
   const [nativeAd, setNativeAd] = useState<NativeAd | null>(null);
 
   useEffect(() => {
     let active = true;
     let loadedAd: NativeAd | null = null;
-    setNativeAd(null);
 
-    if (!ready || !canRequestAds || !adsEnabled || adsRemoved) {
+    if (!ready || !canRequestAds || !adsEnabled) {
       return () => {
         active = false;
       };
@@ -76,9 +74,9 @@ export function ResultAdCard({ placement = 'results' }: ResultAdCardProps) {
       active = false;
       loadedAd?.destroy();
     };
-  }, [adsEnabled, adsRemoved, canRequestAds, placement, ready]);
+  }, [adsEnabled, canRequestAds, placement, ready]);
 
-  if (!ready || !adsEnabled || adsRemoved || !nativeAd) return null;
+  if (!ready || !adsEnabled || !nativeAd) return null;
 
   return (
     <NativeAdView

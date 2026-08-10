@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
-import { comparePick, crossCheckHistory, parsePick, resultPageForGame, validatePick } from '../picks';
+import { GAME_BY_CODE } from '../games';
+import {
+  comparePick,
+  crossCheckHistory,
+  generateRandomCombination,
+  parsePick,
+  resultPageForGame,
+  validatePick,
+} from '../picks';
 import type { LotteryDraw } from '../types';
 
 const draw = (overrides: Partial<LotteryDraw>): LotteryDraw => ({
@@ -15,6 +23,16 @@ const draw = (overrides: Partial<LotteryDraw>): LotteryDraw => ({
 });
 
 describe('pick parsing and validation', () => {
+  it('generates a valid unweighted random combination for each rule shape', () => {
+    const jackpot = generateRandomCombination(GAME_BY_CODE.UL58);
+    const digitGame = generateRandomCombination(GAME_BY_CODE['6DL']);
+
+    expect(validatePick(jackpot, 'UL58')).toEqual([]);
+    expect(new Set(jackpot).size).toBe(6);
+    expect(jackpot).toEqual([...jackpot].sort((left, right) => left - right));
+    expect(validatePick(digitGame, '6DL')).toEqual([]);
+  });
+
   it('preserves positional leading zeroes for digit games', () => {
     const parsed = parsePick('046', '3DL');
     expect(parsed.ok).toBe(true);

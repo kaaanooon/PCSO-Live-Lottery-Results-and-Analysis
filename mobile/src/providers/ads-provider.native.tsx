@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type PropsWithChildren } from 're
 import mobileAds, { AdsConsent } from 'react-native-google-mobile-ads';
 
 import { AdsContext, type AdsContextValue } from '@/providers/ads-context';
-import { usePreferences } from '@/providers/preferences-provider';
+import { usePurchases } from '@/providers/purchases-context';
 
 interface NativeAdsState {
   readonly ready: boolean;
@@ -20,11 +20,14 @@ const INITIAL_STATE: NativeAdsState = {
  * SDK initialization complete.
  */
 export function AdsProvider({ children }: PropsWithChildren) {
-  const { adsRemoved } = usePreferences();
+  const { adsRemoved, ready: purchasesReady } = usePurchases();
   const [state, setState] = useState<NativeAdsState>(INITIAL_STATE);
   const initializationPromise = useRef<Promise<unknown> | null>(null);
 
   useEffect(() => {
+    if (!purchasesReady) return;
+    if (adsRemoved) return;
+
     let active = true;
 
     const startMobileAdsWhenPermitted = async (): Promise<boolean> => {
@@ -64,15 +67,16 @@ export function AdsProvider({ children }: PropsWithChildren) {
     return () => {
       active = false;
     };
-  }, []);
+  }, [adsRemoved, purchasesReady]);
 
   const value = useMemo<AdsContextValue>(
     () => ({
-      ready: state.ready,
-      canRequestAds: state.canRequestAds,
-      adsEnabled: state.ready && state.canRequestAds && !adsRemoved,
+      ready: purchasesReady && (adsRemoved || state.ready),
+      canRequestAds: !adsRemoved && state.canRequestAds,
+      adsEnabled:
+        purchasesReady && state.ready && state.canRequestAds && !adsRemoved,
     }),
-    [adsRemoved, state.canRequestAds, state.ready],
+    [adsRemoved, purchasesReady, state.canRequestAds, state.ready],
   );
 
   return <AdsContext.Provider value={value}>{children}</AdsContext.Provider>;

@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { TopBannerAd } from '@/components/ads/ad-banner';
 import { useAds } from '@/providers/ads-context';
-import { useAppTheme, usePreferences } from '@/providers/preferences-provider';
+import { useAppTheme } from '@/providers/preferences-provider';
 import { palette, radius, spacing } from '@/theme/tokens';
 
 type ScreenProps = PropsWithChildren<{
@@ -18,7 +18,6 @@ type ScreenProps = PropsWithChildren<{
   backLabel?: string;
   refreshControl?: React.ReactElement<RefreshControlProps>;
   bottomAd?: ReactNode;
-  floatingBottom?: number;
   scrollToTopOnFocus?: boolean;
 }>;
 
@@ -30,15 +29,13 @@ export function Screen({
   backLabel = 'Back',
   refreshControl,
   bottomAd,
-  floatingBottom,
   scrollToTopOnFocus = false,
   children,
 }: ScreenProps) {
   const scrollRef = useRef<ScrollView>(null);
   const inactiveScrollRef = useRef<ScrollView>(null);
-  const { isDark, colors } = useAppTheme();
+  const { colors } = useAppTheme();
   const { adsEnabled } = useAds();
-  const { toggleDarkMode, ready } = usePreferences();
   const showBottomAd = Boolean(bottomAd) && adsEnabled;
 
   // React Navigation handles a second press on the active tab, while the focus
@@ -102,28 +99,6 @@ export function Screen({
           {bottomAd}
         </View>
       ) : null}
-      <Pressable
-        accessibilityRole="switch"
-        accessibilityLabel={isDark ? 'Use light mode' : 'Use dark mode'}
-        accessibilityState={{ checked: isDark, disabled: !ready }}
-        disabled={!ready}
-        onPress={toggleDarkMode}
-        style={({ pressed }) => [
-          styles.themeToggle,
-          {
-            backgroundColor: colors.surface,
-            borderColor: colors.border,
-            bottom: floatingBottom ?? (showBottomAd ? 88 : 32),
-          },
-          !ready && styles.themeToggleDisabled,
-          pressed && styles.themeTogglePressed,
-        ]}>
-        <Ionicons
-          name={isDark ? 'sunny-outline' : 'moon-outline'}
-          size={16}
-          color={colors.primary}
-        />
-      </Pressable>
     </SafeAreaView>
   );
 }
@@ -168,25 +143,6 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xxl + 20,
     gap: spacing.md,
   },
-  themeToggle: {
-    position: 'absolute',
-    right: 7,
-    bottom: 32,
-    zIndex: 20,
-    width: 34,
-    height: 34,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderRadius: 17,
-    shadowColor: palette.navy950,
-    shadowOpacity: 0.16,
-    shadowRadius: 5,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 4,
-  },
-  themeTogglePressed: { opacity: 0.68, transform: [{ scale: 0.95 }] },
-  themeToggleDisabled: { opacity: 0.35 },
   bottomAdSlot: {
     minHeight: 58,
     flexShrink: 0,

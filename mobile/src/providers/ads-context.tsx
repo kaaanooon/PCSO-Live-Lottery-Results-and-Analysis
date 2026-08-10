@@ -5,7 +5,7 @@ export interface AdsContextValue {
   readonly ready: boolean;
   /** Whether the current consent state permits ad requests on this platform. */
   readonly canRequestAds: boolean;
-  /** Whether ad UI should render after consent and the remove-ads preference. */
+  /** Whether ad UI should render after consent and paid-entitlement restoration. */
   readonly adsEnabled: boolean;
 }
 

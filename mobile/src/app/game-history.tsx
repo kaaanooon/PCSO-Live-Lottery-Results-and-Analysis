@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Fragment, useEffect, useMemo, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { ResultAdCard } from '@/components/ads/result-ad-card';
@@ -77,9 +77,11 @@ export default function GameHistoryScreen() {
   const { draws } = useDraws();
   const { colors, isDark } = useAppTheme();
   const pageStyles = useMemo(() => makeStyles(colors), [colors]);
-  const [limit, setLimit] = useState(PAGE_SIZE);
-
-  useEffect(() => setLimit(PAGE_SIZE), [gameCode]);
+  const [pageState, setPageState] = useState<{
+    readonly gameCode: LogicalGameCode | null;
+    readonly limit: number;
+  }>({ gameCode, limit: PAGE_SIZE });
+  const limit = pageState.gameCode === gameCode ? pageState.limit : PAGE_SIZE;
 
   const history = useMemo(
     () =>
@@ -152,7 +154,7 @@ export default function GameHistoryScreen() {
                   </View>
                 </View>
               </View>
-              {index === 4 && visibleHistory.length > 5 ? (
+              {index % PAGE_SIZE === 4 && index + 1 < visibleHistory.length ? (
                 <ResultAdCard placement="history" />
               ) : null}
             </Fragment>
@@ -166,7 +168,10 @@ export default function GameHistoryScreen() {
             <Pressable
               accessibilityLabel={`Load 10 more ${rule.name} results`}
               accessibilityRole="button"
-              onPress={() => setLimit((value) => Math.min(value + PAGE_SIZE, history.length))}
+              onPress={() => setPageState({
+                gameCode,
+                limit: Math.min(limit + PAGE_SIZE, history.length),
+              })}
               style={({ pressed }) => [pageStyles.moreButton, pressed && pageStyles.pressed]}>
               <Text style={pageStyles.moreText}>More Results</Text>
               <Ionicons name="chevron-down" size={18} color={palette.white} />

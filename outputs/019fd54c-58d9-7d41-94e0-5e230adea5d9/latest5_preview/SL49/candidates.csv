@@ -1,6 +1,0 @@
-rank,strategy,combination,numbers,even_count,odd_count,low_count,high_count,sum,unique_values,historical_fit_score,seen_before_count,rambolito_key,straight_permutations,theoretical_odds_1_in,note
-1,Uniform baseline,02-11-17-21-37-44,"['02', '11', '17', '21', '37', '44']",2,4,4,2,132,6,67.06,0,,,13983816,"Historical fit is descriptive, not a win probability."
-2,Uniform baseline,03-07-18-19-36-41,"['03', '07', '18', '19', '36', '41']",2,4,4,2,124,6,59.46,0,,,13983816,"Historical fit is descriptive, not a win probability."
-3,Smoothed frequency,11-13-14-37-40-44,"['11', '13', '14', '37', '40', '44']",3,3,3,3,159,6,90.34,0,,,13983816,"Historical fit is descriptive, not a win probability."
-4,Smoothed frequency,01-15-17-36-37-47,"['01', '15', '17', '36', '37', '47']",1,5,3,3,153,6,89.71,0,,,13983816,"Historical fit is descriptive, not a win probability."
-5,Historical profile,01-05-11-21-44-47,"['01', '05', '11', '21', '44', '47']",1,5,4,2,129,6,89.95,0,,,13983816,"Historical fit is descriptive, not a win probability."

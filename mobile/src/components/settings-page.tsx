@@ -6,11 +6,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { TopBannerAd } from '@/components/ads/ad-banner';
-import {
-  useAppTheme,
-  usePreferences,
-  type AppThemeColors,
-} from '@/providers/preferences-provider';
+import { useAppTheme, type AppThemeColors } from '@/providers/preferences-provider';
 import { palette, radius, spacing } from '@/theme/tokens';
 
 type SettingsPageProps = PropsWithChildren<{
@@ -33,8 +29,7 @@ export function SettingsPage({
 }: SettingsPageProps) {
   const scrollRef = useRef<ScrollView>(null);
   const inactiveScrollRef = useRef<ScrollView>(null);
-  const { isDark, colors } = useAppTheme();
-  const { toggleDarkMode, ready } = usePreferences();
+  const { colors } = useAppTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
   useScrollToTop(inTabs ? scrollRef : inactiveScrollRef);
@@ -79,23 +74,6 @@ export function SettingsPage({
         style={styles.scroll}>
         {children}
       </ScrollView>
-      <Pressable
-        accessibilityRole="switch"
-        accessibilityLabel={isDark ? 'Use light mode' : 'Use dark mode'}
-        accessibilityState={{ checked: isDark, disabled: !ready }}
-        disabled={!ready}
-        onPress={toggleDarkMode}
-        style={({ pressed }) => [
-          styles.themeToggle,
-          !ready && styles.themeToggleDisabled,
-          pressed && styles.themeTogglePressed,
-        ]}>
-        <Ionicons
-          name={isDark ? 'sunny-outline' : 'moon-outline'}
-          size={16}
-          color={colors.primary}
-        />
-      </Pressable>
     </SafeAreaView>
   );
 }
@@ -139,27 +117,6 @@ function makeStyles(colors: AppThemeColors) {
       paddingBottom: spacing.xxl + 20,
       gap: spacing.md,
     },
-    themeToggle: {
-      position: 'absolute',
-      right: 7,
-      bottom: 32,
-      zIndex: 20,
-      width: 34,
-      height: 34,
-      alignItems: 'center',
-      justifyContent: 'center',
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: 17,
-      backgroundColor: colors.surface,
-      shadowColor: '#020817',
-      shadowOpacity: 0.16,
-      shadowRadius: 5,
-      shadowOffset: { width: 0, height: 2 },
-      elevation: 4,
-    },
-    themeTogglePressed: { opacity: 0.68, transform: [{ scale: 0.95 }] },
-    themeToggleDisabled: { opacity: 0.35 },
     pressed: { opacity: 0.66 },
   });
 }

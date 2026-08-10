@@ -8,3 +8,10 @@ dist/
 build/
 *.egg-info/
 
+# Local environment files
+.env
+.env.*
+!.env.example
+
+# Generated browser and UI-test profiles
+/outputs/
