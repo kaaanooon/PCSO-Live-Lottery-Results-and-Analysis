@@ -1,6 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
-import { router } from 'expo-router';
 import { Fragment, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -10,6 +9,7 @@ import { Screen } from '@/components/screen';
 import { GAME_BY_CODE, formatNumber } from '@/domain/games';
 import type { GameRule, LogicalGameCode, LotteryDraw } from '@/domain/types';
 import { formatCount, formatDrawTime, formatPeso } from '@/lib/format';
+import { useGuardedNavigation } from '@/lib/use-guarded-navigation';
 import { useDraws } from '@/providers/draws-provider';
 import { useAppTheme, usePreferences } from '@/providers/preferences-provider';
 import { palette, radius, shadow, spacing } from '@/theme/tokens';
@@ -152,6 +152,7 @@ export default function ResultsScreen() {
   const { draws, source, error } = useDraws();
   const { enabledGames } = usePreferences();
   const { colors } = useAppTheme();
+  const { navigate } = useGuardedNavigation();
   const [offset, setOffset] = useState(0);
   const visibleGameCodes = RESULT_GAME_CODES.filter((code) => enabledGames.includes(code));
   const dates = useMemo(
@@ -211,7 +212,7 @@ export default function ResultsScreen() {
             <GameResultCard
               rule={GAME_BY_CODE[code]}
               draws={selectedDraws.get(code) ?? []}
-              onPress={() => router.push({ pathname: '/game-history', params: { game: code } })}
+              onPress={() => navigate({ pathname: '/game-history', params: { game: code } })}
             />
             {(index + 1) % 3 === 0 && index < visibleGameCodes.length - 1 ? (
               <ResultAdCard placement="results" />

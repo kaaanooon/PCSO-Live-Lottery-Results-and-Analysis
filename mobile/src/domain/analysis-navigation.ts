@@ -6,6 +6,12 @@ export type AnalysisSlot = 'ALL' | DrawGameCode;
 
 export const ANALYSIS_FINDINGS = [
   {
+    id: 'random',
+    title: 'Random combination',
+    description: 'Generate a fair random pick, then describe its pattern.',
+    icon: 'shuffle-outline',
+  },
+  {
     id: 'summary',
     title: 'Summary',
     description: 'Most seen, least seen, totals, and repeated numbers.',
@@ -54,12 +60,6 @@ export const ANALYSIS_FINDINGS = [
     icon: 'list-outline',
     orderedOnly: true,
   },
-  {
-    id: 'random',
-    title: 'Random combination',
-    description: 'Generate a fair random pick that does not use past results.',
-    icon: 'shuffle-outline',
-  },
 ] as const;
 
 export type AnalysisFinding = (typeof ANALYSIS_FINDINGS)[number]['id'];
@@ -105,4 +105,3 @@ export function latestAnalysisDraws(
     )
     .slice(-ANALYSIS_DRAW_COUNT);
 }
-

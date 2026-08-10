@@ -1,9 +1,9 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { router } from 'expo-router';
 import { useMemo, type ComponentProps, type ReactNode } from 'react';
 import { Alert, Pressable, Share, StyleSheet, Switch, Text, View } from 'react-native';
 
 import { SettingsPage } from '@/components/settings-page';
+import { useGuardedNavigation } from '@/lib/use-guarded-navigation';
 import { useResultReminders } from '@/providers/notifications-context';
 import {
   useAppTheme,
@@ -58,6 +58,7 @@ function SettingsRow({
 
 export default function SettingsScreen() {
   const { colors } = useAppTheme();
+  const { navigate } = useGuardedNavigation();
   const {
     isDark,
     toggleDarkMode,
@@ -204,13 +205,13 @@ export default function SettingsScreen() {
           icon="warning-outline"
           title="Disclaimer"
           subtitle="Odds, result verification, and responsible play"
-          onPress={() => router.push({ pathname: '/settings-detail', params: { section: 'disclaimer' } })}
+          onPress={() => navigate({ pathname: '/settings-detail', params: { section: 'disclaimer' } })}
         />
         <SettingsRow
           icon="options-outline"
           title="My Games"
           subtitle={`${enabledGames.length} of 9 games shown in Results`}
-          onPress={() => router.push('/my-games')}
+          onPress={() => navigate('/my-games')}
         />
         <SettingsRow
           icon="remove-circle-outline"
@@ -224,7 +225,7 @@ export default function SettingsScreen() {
                   ? 'Payment confirmation pending'
                   : `One-time purchase${storePrice ? ` · ${storePrice}` : ' · ₱49'}`
           }
-          onPress={() => router.push({ pathname: '/settings-detail', params: { section: 'remove-ads' } })}
+          onPress={() => navigate({ pathname: '/settings-detail', params: { section: 'remove-ads' } })}
         />
         <SettingsRow
           icon="star-outline"
@@ -241,15 +242,15 @@ export default function SettingsScreen() {
         <SettingsRow
           icon="shield-checkmark-outline"
           title="Privacy policy"
-          subtitle="Read the current pre-release privacy draft"
-          onPress={() => router.push({ pathname: '/settings-detail', params: { section: 'privacy' } })}
+          subtitle="How the app and its providers handle data"
+          onPress={() => navigate({ pathname: '/settings-detail', params: { section: 'privacy' } })}
         />
         <SettingsRow
           last
           icon="information-circle-outline"
           title="About app and licenses"
           subtitle="Version, data source, and open-source notices"
-          onPress={() => router.push({ pathname: '/settings-detail', params: { section: 'about' } })}
+          onPress={() => navigate({ pathname: '/settings-detail', params: { section: 'about' } })}
         />
       </View>
 

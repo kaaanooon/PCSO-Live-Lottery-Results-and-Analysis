@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useMemo, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { ActionButton } from '@/components/action-button';
 import { Notice } from '@/components/notice';
@@ -439,18 +439,145 @@ function PositionFinding({ analysis }: { analysis: GameAnalysis }) {
   );
 }
 
-function RandomFinding({ rule }: { rule: GameRule }) {
+function describeRandomCombination(
+  numbers: readonly number[],
+  analysis: GameAnalysis,
+  previous: string | null,
+): string {
+  const drawCount = analysis.summary.drawCount;
+  const evenCount = numbers.filter((number) => number % 2 === 0).length;
+  const lowCount = numbers.filter(
+    (number) => number <= analysis.summary.lowBoundary,
+  ).length;
+  const sum = numbers.reduce((total, number) => total + number, 0);
+  const orderedForPairs = analysis.rule.ordered
+    ? numbers
+    : [...numbers].sort((left, right) => left - right);
+  const consecutivePairs = orderedForPairs
+    .slice(1)
+    .filter((number, index) => Math.abs(number - orderedForPairs[index]!) === 1)
+    .length;
+  const hotCount = numbers.filter((number) =>
+    analysis.hotNumbers.includes(number),
+  ).length;
+  const coldCount = numbers.filter((number) =>
+    analysis.coldNumbers.includes(number),
+  ).length;
+  const comments = [
+    'Pattern: ' + evenCount + ' even and ' + (numbers.length - evenCount) +
+      ' odd. This mix does not change the pick\'s odds.',
+    'Range: ' + lowCount + ' low and ' + (numbers.length - lowCount) +
+      ' high, using ' + analysis.summary.lowBoundary + ' as the low-number limit.',
+    consecutivePairs
+      ? 'This pick has ' + consecutivePairs + ' consecutive pair' +
+        (consecutivePairs === 1 ? '' : 's') + '. That is only a pattern description.'
+      : 'This pick has no consecutive pair. That does not make it better or worse.',
+  ];
+
+  if (analysis.sumStatistics.average !== null) {
+    const relation = sum > analysis.sumStatistics.average
+      ? 'above'
+      : sum < analysis.sumStatistics.average
+        ? 'below'
+        : 'equal to';
+    comments.push(
+      'Its total is ' + sum + ', ' + relation + ' the ' +
+        analysis.sumStatistics.average.toFixed(1) + ' average in these latest ' +
+        drawCount + ' draws.',
+    );
+  }
+
+  if (analysis.hotNumbers.length) {
+    comments.push(
+      hotCount
+        ? 'It includes ' + hotCount + ' of the most-seen numbers in the latest ' +
+          drawCount + ' draws. They are not more likely next time.'
+        : 'It includes none of the most-seen numbers in the latest ' + drawCount +
+          ' draws. Its odds are still unchanged.',
+    );
+  }
+
+  if (analysis.coldNumbers.length) {
+    comments.push(
+      coldCount
+        ? 'It includes ' + coldCount + ' of the least-seen numbers in the latest ' +
+          drawCount + ' draws. A cold number is not due.'
+        : 'It includes none of the least-seen numbers in the latest ' + drawCount +
+          ' draws. That has no effect on its odds.',
+    );
+  }
+
+  if (analysis.rule.ordered) {
+    const distinct = new Set(numbers).size;
+    comments.push(
+      distinct === numbers.length
+        ? 'Every digit position is different in this random pick.'
+        : 'This random pick repeats ' + (numbers.length - distinct) +
+          ' digit position' + (numbers.length - distinct === 1 ? '' : 's') + '.',
+    );
+  }
+
+  const alternatives = comments.filter((comment) => comment !== previous);
+  return alternatives[Math.floor(Math.random() * alternatives.length)] ?? comments[0]!;
+}
+
+function RandomFinding({ analysis }: { analysis: GameAnalysis }) {
   const { colors } = useAppTheme();
+  const { rule } = analysis;
   const [numbers, setNumbers] = useState(() => generateRandomCombination(rule));
+  const [commentary, setCommentary] = useState(() =>
+    describeRandomCombination(numbers, analysis, null),
+  );
+  const [isGenerating, setIsGenerating] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(
+    () => () => {
+      if (timer.current) clearTimeout(timer.current);
+    },
+    [],
+  );
+
+  const generate = () => {
+    if (isGenerating) return;
+    setIsGenerating(true);
+    timer.current = setTimeout(() => {
+      const next = generateRandomCombination(rule);
+      setNumbers(next);
+      setCommentary((current) =>
+        describeRandomCombination(next, analysis, current),
+      );
+      setIsGenerating(false);
+      timer.current = null;
+    }, 650);
+  };
 
   return (
     <>
       <SectionCard title="Random combination">
-        <NumberBalls numbers={numbers} rule={rule} />
-        <ActionButton icon="shuffle" label="New combination" onPress={() => setNumbers(generateRandomCombination(rule))} />
+        <View style={isGenerating ? styles.generatingCombination : undefined}>
+          <NumberBalls numbers={numbers} rule={rule} />
+        </View>
+        <View style={[styles.randomComment, { backgroundColor: colors.surfaceAlt }]}>
+          {isGenerating ? (
+            <ActivityIndicator color={colors.primary} size="small" />
+          ) : (
+            <Ionicons color={colors.primary} name="sparkles-outline" size={18} />
+          )}
+          <Text style={[styles.randomCommentText, { color: colors.text }]}>
+            {isGenerating ? 'Creating and describing a new random pick...' : commentary}
+          </Text>
+        </View>
+        <ActionButton
+          disabled={isGenerating}
+          icon="shuffle"
+          label={isGenerating ? 'Generating...' : 'New combination'}
+          onPress={generate}
+        />
       </SectionCard>
       <Notice>
-        This pick is completely random and does not use the 10 analyzed draws. Every valid combination has equal odds.
+        The numbers are completely random. The sentence only describes how the
+        pick compares with the latest draws; it does not predict the next draw.
       </Notice>
       <Text style={[styles.odds, { color: colors.textMuted }]}>Odds: 1 in {formatCount(theoreticalOutcomeCount(rule))}</Text>
     </>
@@ -469,7 +596,7 @@ function FindingContent({ finding, analysis }: { finding: AnalysisFinding; analy
     case 'position': return analysis.rule.ordered
       ? <PositionFinding analysis={analysis} />
       : <Notice>This finding only applies to exact-order games.</Notice>;
-    case 'random': return <RandomFinding rule={analysis.rule} />;
+    case 'random': return <RandomFinding analysis={analysis} />;
   }
 }
 
@@ -589,5 +716,15 @@ const styles = StyleSheet.create({
   positionNumber: { width: 34, fontSize: 10, fontWeight: '900' },
   positionBody: { flex: 1 },
   positionCount: { width: 62, fontSize: 9, fontWeight: '800', textAlign: 'right' },
+  generatingCombination: { opacity: 0.42 },
+  randomComment: {
+    minHeight: 58,
+    padding: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    borderRadius: radius.md,
+  },
+  randomCommentText: { flex: 1, fontSize: 11, lineHeight: 17, fontWeight: '700' },
   odds: { paddingHorizontal: spacing.xs, fontSize: 10, lineHeight: 15, textAlign: 'center' },
 });

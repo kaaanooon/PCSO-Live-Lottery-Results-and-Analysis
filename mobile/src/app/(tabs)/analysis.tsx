@@ -1,5 +1,4 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { router } from 'expo-router';
 import { useMemo, useState, type ComponentProps } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -20,6 +19,7 @@ import {
 import { GAME_BY_CODE } from '@/domain/games';
 import type { LogicalGameCode } from '@/domain/types';
 import { formatDrawDate } from '@/lib/format';
+import { useGuardedNavigation } from '@/lib/use-guarded-navigation';
 import { useDraws } from '@/providers/draws-provider';
 import { useAppTheme } from '@/providers/preferences-provider';
 import { radius, spacing } from '@/theme/tokens';
@@ -31,11 +31,13 @@ function FindingButton({
   description,
   icon,
   onPress,
+  disabled = false,
 }: {
   title: string;
   description: string;
   icon: IconName;
   onPress: () => void;
+  disabled?: boolean;
 }) {
   const { colors } = useAppTheme();
 
@@ -43,10 +45,13 @@ function FindingButton({
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={`${title}. ${description}`}
+      accessibilityState={{ disabled }}
+      disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => [
         styles.findingButton,
         { backgroundColor: colors.surface, borderColor: colors.border },
+        disabled && styles.disabled,
         pressed && styles.pressed,
       ]}>
       <View style={[styles.findingIcon, { backgroundColor: colors.surfaceAlt }]}>
@@ -65,6 +70,7 @@ export default function AnalysisScreen() {
   const { draws } = useDraws();
   const { colors } = useAppTheme();
   const { adsEnabled, runBeforeAnalysis } = useAnalysisInterstitial();
+  const { navigate, navigating } = useGuardedNavigation();
   const [gameCode, setGameCode] = useState<LogicalGameCode>('UL58');
   const [slot, setSlot] = useState<AnalysisSlot>('ALL');
   const [hasAnalyzed, setHasAnalyzed] = useState(false);
@@ -94,7 +100,7 @@ export default function AnalysisScreen() {
   };
 
   const openFinding = (finding: AnalysisFinding) => {
-    router.push({
+    navigate({
       pathname: '/analysis-finding',
       params: { finding, game: gameCode, slot },
     });
@@ -118,16 +124,10 @@ export default function AnalysisScreen() {
             />
           </View>
         ) : null}
-        <View style={[styles.fixedSample, { backgroundColor: colors.surfaceAlt }]}>
-          <Ionicons color={colors.primary} name="layers-outline" size={18} />
-          <Text style={[styles.fixedSampleText, { color: colors.text }]}>
-            Latest {ANALYSIS_DRAW_COUNT} draws
-          </Text>
-        </View>
         <ActionButton
           disabled={selectedDraws.length === 0}
           icon="analytics"
-          label="Analyze"
+          label={'Analyze latest ' + ANALYSIS_DRAW_COUNT + ' draws'}
           onPress={analyze}
         />
         {adsEnabled ? (
@@ -147,6 +147,7 @@ export default function AnalysisScreen() {
             {findings.map((finding) => (
               <FindingButton
                 description={finding.description}
+                disabled={navigating}
                 icon={finding.icon as IconName}
                 key={finding.id}
                 onPress={() => openFinding(finding.id)}
@@ -169,16 +170,6 @@ export default function AnalysisScreen() {
 const styles = StyleSheet.create({
   controlGroup: { gap: spacing.sm },
   controlLabel: { fontSize: 12, fontWeight: '900' },
-  fixedSample: {
-    minHeight: 44,
-    paddingHorizontal: spacing.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    borderRadius: radius.md,
-  },
-  fixedSampleText: { fontSize: 13, fontWeight: '900' },
   adNotice: { fontSize: 10, lineHeight: 14, textAlign: 'center' },
   findings: { gap: spacing.sm },
   scope: { paddingHorizontal: spacing.xs, paddingBottom: spacing.xs },
@@ -204,4 +195,5 @@ const styles = StyleSheet.create({
   findingTitle: { fontSize: 14, lineHeight: 18, fontWeight: '900' },
   findingDescription: { marginTop: 2, fontSize: 10, lineHeight: 14 },
   pressed: { opacity: 0.68, transform: [{ scale: 0.99 }] },
+  disabled: { opacity: 0.5 },
 });

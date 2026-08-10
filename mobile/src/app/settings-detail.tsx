@@ -1,10 +1,11 @@
 import Constants from 'expo-constants';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, type ReactNode } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Linking, StyleSheet, Text, View } from 'react-native';
 
 import { ActionButton } from '@/components/action-button';
 import { SettingsPage } from '@/components/settings-page';
+import { useAds } from '@/providers/ads-context';
 import {
   useAppTheme,
   type AppThemeColors,
@@ -13,6 +14,8 @@ import { usePurchases } from '@/providers/purchases-context';
 import { radius, spacing } from '@/theme/tokens';
 
 type DetailSection = 'disclaimer' | 'remove-ads' | 'privacy' | 'about';
+const PRIVACY_POLICY_URL =
+  'https://kaaanooon.github.io/PCSO-Live-Lottery-Results-and-Analysis/privacy/';
 
 const TITLES: Readonly<Record<DetailSection, string>> = {
   disclaimer: 'Disclaimer',
@@ -160,13 +163,28 @@ function RemoveAdsContent() {
 }
 
 function PrivacyContent() {
+  const { privacyOptionsRequired, showPrivacyOptions } = useAds();
+
   return (
     <>
-      <InfoCard title="Pre-release privacy draft">
+      <InfoCard title="Published privacy policy">
         <Paragraph>
-          This summary describes the current app behavior and must be reviewed, completed with publisher contact details, and published at a public URL before a store release.
+          Read the complete policy on the public GitHub Pages site. It covers local app data, lottery-result requests, advertising, purchases, and notifications.
         </Paragraph>
       </InfoCard>
+      <ActionButton
+        icon="open-outline"
+        label="Open full privacy policy"
+        onPress={() => void Linking.openURL(PRIVACY_POLICY_URL)}
+      />
+      {privacyOptionsRequired ? (
+        <ActionButton
+          icon="options-outline"
+          label="Manage ad privacy"
+          onPress={() => void showPrivacyOptions()}
+          variant="secondary"
+        />
+      ) : null}
       <InfoCard title="Data kept on your device">
         <Bullet>Saved lottery picks and their play settings.</Bullet>
         <Bullet>Appearance, selected-game, result-reminder, and cached ad-free entitlement state.</Bullet>
@@ -209,7 +227,7 @@ function PrivacyContent() {
       </InfoCard>
       <InfoCard title="Your choices">
         <Paragraph>
-          You can edit or delete saved picks in the app. You can remove all locally stored app data through your device’s app-storage settings or by uninstalling the app. A final public policy should explain how to contact the publisher with privacy questions.
+          You can edit or delete saved picks in the app. You can remove all locally stored app data through your device’s app-storage settings or by uninstalling the app. The public policy includes the current privacy contact method.
         </Paragraph>
       </InfoCard>
     </>

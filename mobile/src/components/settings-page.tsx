@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useFocusEffect, useScrollToTop } from 'expo-router';
-import { useCallback, useMemo, useRef, type PropsWithChildren } from 'react';
+import { useNavigation, useScrollToTop } from 'expo-router';
+import { useEffect, useMemo, useRef, type PropsWithChildren } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -33,13 +33,13 @@ export function SettingsPage({
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
   useScrollToTop(inTabs ? scrollRef : inactiveScrollRef);
-  useFocusEffect(
-    useCallback(() => {
-      if (inTabs) {
-        scrollRef.current?.scrollTo({ y: 0, animated: false });
-      }
-    }, [inTabs]),
-  );
+  const navigation = useNavigation();
+  useEffect(() => {
+    if (!inTabs) return;
+    return navigation.addListener('tabPress' as never, () => {
+      scrollRef.current?.scrollTo({ y: 0, animated: false });
+    });
+  }, [inTabs, navigation]);
 
   return (
     <SafeAreaView

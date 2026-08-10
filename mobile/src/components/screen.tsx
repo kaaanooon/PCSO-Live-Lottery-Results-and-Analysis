@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useFocusEffect, useScrollToTop } from 'expo-router';
-import { useCallback, useRef, type PropsWithChildren, type ReactNode } from 'react';
+import { useNavigation, useScrollToTop } from 'expo-router';
+import { useEffect, useRef, type PropsWithChildren, type ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View, type RefreshControlProps } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -38,16 +38,16 @@ export function Screen({
   const { adsEnabled } = useAds();
   const showBottomAd = Boolean(bottomAd) && adsEnabled;
 
-  // React Navigation handles a second press on the active tab, while the focus
-  // effect also resets retained tab screens when the user switches between tabs.
+  // Keep a finding/detail screen's previous scroll position when navigating
+  // back. Only an actual tab press resets the retained tab screen.
   useScrollToTop(scrollToTopOnFocus ? scrollRef : inactiveScrollRef);
-  useFocusEffect(
-    useCallback(() => {
-      if (scrollToTopOnFocus) {
-        scrollRef.current?.scrollTo({ y: 0, animated: false });
-      }
-    }, [scrollToTopOnFocus]),
-  );
+  const navigation = useNavigation();
+  useEffect(() => {
+    if (!scrollToTopOnFocus) return;
+    return navigation.addListener('tabPress' as never, () => {
+      scrollRef.current?.scrollTo({ y: 0, animated: false });
+    });
+  }, [navigation, scrollToTopOnFocus]);
 
   return (
     <SafeAreaView

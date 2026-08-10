@@ -14,6 +14,8 @@ export function AdsProvider({ children }: PropsWithChildren) {
       ready: purchasesReady,
       canRequestAds: true,
       adsEnabled: purchasesReady && !adsRemoved,
+      privacyOptionsRequired: false,
+      showPrivacyOptions: async () => false,
     }),
     [adsRemoved, purchasesReady],
   );

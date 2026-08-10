@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
-import { router, useFocusEffect } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -14,6 +14,7 @@ import { comparePick, sortDrawsNewestFirst } from '@/domain/picks';
 import { restoreSavedPicks, type SavedPick } from '@/domain/saved-picks';
 import type { LogicalGameCode, LotteryDraw } from '@/domain/types';
 import { formatDrawDate, formatDrawTime } from '@/lib/format';
+import { useGuardedNavigation } from '@/lib/use-guarded-navigation';
 import { useDraws } from '@/providers/draws-provider';
 import { useAppTheme } from '@/providers/preferences-provider';
 import { palette, radius, shadow, spacing } from '@/theme/tokens';
@@ -198,6 +199,7 @@ function PickResult({
 export default function PickScreen() {
   const { colors, isDark } = useAppTheme();
   const { draws } = useDraws();
+  const { navigate } = useGuardedNavigation();
   const [savedPicks, setSavedPicks] = useState<SavedPick[]>([]);
   const [storageReady, setStorageReady] = useState(false);
   const [pageError, setPageError] = useState<string | null>(null);
@@ -263,7 +265,7 @@ export default function PickScreen() {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Add a game"
-          onPress={() => router.push('/pick-editor')}
+          onPress={() => navigate('/pick-editor')}
           style={({ pressed }) => [
             styles.addButton,
             {
@@ -296,7 +298,7 @@ export default function PickScreen() {
           key={pick.id}
           pick={pick}
           draws={draws}
-          onEdit={() => router.push({ pathname: '/pick-editor', params: { id: pick.id } })}
+          onEdit={() => navigate({ pathname: '/pick-editor', params: { id: pick.id } })}
           onDelete={() => void remove(pick.id)}
         />
       ))}
