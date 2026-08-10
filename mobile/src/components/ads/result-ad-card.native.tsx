@@ -55,7 +55,7 @@ export function ResultAdCard({ placement = 'results' }: ResultAdCardProps) {
     }
 
     void NativeAd.createForAdRequest(unitIdFor(placement), {
-      requestAgent: 'PCSO Live Lotto Results and Analysis',
+      requestAgent: 'PCSO Lotto Results & Analysis',
       startVideoMuted: true,
     })
       .then((ad) => {

@@ -20,7 +20,7 @@ function InitializationScreen() {
       style={styles.initialization}>
       <View style={styles.initializationCard}>
         <Image
-          accessibilityLabel="PCSO Live Lotto Results and Analysis"
+          accessibilityLabel="PCSO Lotto Results & Analysis"
           contentFit="contain"
           source={require('@/assets/images/lotto-live-logo-transparent.png')}
           style={styles.logo}

@@ -1,4 +1,4 @@
-# PCSO Live Lotto Results and Analysis
+# PCSO Lotto Results & Analysis
 
 An Expo/React Native mobile app for browsing Philippine lottery results, checking saved picks against draw history, and exploring descriptive statistics. It targets Android and iOS and includes a web preview for quick development and review.
 

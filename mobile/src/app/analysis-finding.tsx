@@ -465,13 +465,13 @@ function describeRandomCombination(
   ).length;
   const comments = [
     'Pattern: ' + evenCount + ' even and ' + (numbers.length - evenCount) +
-      ' odd. This mix does not change the pick\'s odds.',
+      ' odd.',
     'Range: ' + lowCount + ' low and ' + (numbers.length - lowCount) +
       ' high, using ' + analysis.summary.lowBoundary + ' as the low-number limit.',
     consecutivePairs
       ? 'This pick has ' + consecutivePairs + ' consecutive pair' +
-        (consecutivePairs === 1 ? '' : 's') + '. That is only a pattern description.'
-      : 'This pick has no consecutive pair. That does not make it better or worse.',
+        (consecutivePairs === 1 ? '' : 's') + '.'
+      : 'This pick has no consecutive pairs.',
   ];
 
   if (analysis.sumStatistics.average !== null) {
@@ -491,9 +491,9 @@ function describeRandomCombination(
     comments.push(
       hotCount
         ? 'It includes ' + hotCount + ' of the most-seen numbers in the latest ' +
-          drawCount + ' draws. They are not more likely next time.'
+          drawCount + ' draws.'
         : 'It includes none of the most-seen numbers in the latest ' + drawCount +
-          ' draws. Its odds are still unchanged.',
+          ' draws.',
     );
   }
 
@@ -501,9 +501,9 @@ function describeRandomCombination(
     comments.push(
       coldCount
         ? 'It includes ' + coldCount + ' of the least-seen numbers in the latest ' +
-          drawCount + ' draws. A cold number is not due.'
+          drawCount + ' draws.'
         : 'It includes none of the least-seen numbers in the latest ' + drawCount +
-          ' draws. That has no effect on its odds.',
+          ' draws.',
     );
   }
 

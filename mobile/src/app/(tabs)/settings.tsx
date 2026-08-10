@@ -120,16 +120,16 @@ export default function SettingsScreen() {
   const showRatingUnavailable = () => {
     Alert.alert(
       'Rating is not available yet',
-      'PCSO Live Lotto Results and Analysis does not have an App Store or Google Play listing yet. Rating can be enabled after the app is published.',
+      'PCSO Lotto Results & Analysis does not have an App Store or Google Play listing yet. Rating can be enabled after the app is published.',
     );
   };
 
   const shareApp = async () => {
     try {
       await Share.share({
-        title: 'PCSO Live Lotto Results and Analysis',
+        title: 'PCSO Lotto Results & Analysis',
         message:
-          'PCSO Live Lotto Results and Analysis helps you browse Philippine lottery results, save and check picks, and explore draw-history statistics. For ages 18+; play responsibly.',
+          'PCSO Lotto Results & Analysis helps you browse Philippine lottery results, save and check picks, and explore draw-history statistics. For ages 18+; play responsibly.',
       });
     } catch {
       Alert.alert('Unable to share', 'The device share sheet could not be opened.');
@@ -255,7 +255,7 @@ export default function SettingsScreen() {
       </View>
 
       <Text style={styles.footer}>
-        PCSO Live Lotto Results and Analysis is an informational companion, not a prediction or official ticket-validation service. For ages 18+.
+        PCSO Lotto Results & Analysis is an informational companion, not a prediction or official ticket-validation service. For ages 18+.
       </Text>
     </SettingsPage>
   );

@@ -67,7 +67,7 @@ function DisclaimerContent() {
     <>
       <InfoCard title="Informational use only">
         <Paragraph>
-          PCSO Live Lotto Results and Analysis is an independent companion for viewing lottery history, checking entered combinations, and exploring descriptive statistics. Despite its name, it is not affiliated with or endorsed by the Philippine Charity Sweepstakes Office (PCSO).
+          PCSO Lotto Results & Analysis is an independent companion for viewing lottery history, checking entered combinations, and exploring descriptive statistics. Despite its name, it is not affiliated with or endorsed by the Philippine Charity Sweepstakes Office (PCSO).
         </Paragraph>
         <Paragraph>
           Results shown in the app may be delayed, incomplete, or incorrect. They are not official ticket validation. Always keep the original ticket and verify results, play type, claim rules, and deadlines directly with PCSO.
@@ -238,12 +238,12 @@ function AboutContent() {
   const version = Constants.expoConfig?.version ?? '0.1.0';
   return (
     <>
-      <InfoCard title={`PCSO Live Lotto Results and Analysis · Version ${version}`}>
+      <InfoCard title={`PCSO Lotto Results & Analysis · Version ${version}`}>
         <Paragraph>
           A React Native and Expo companion for browsing Philippine lottery results, checking saved picks, and understanding descriptive draw-history statistics.
         </Paragraph>
         <Paragraph>
-          Live refreshes use the LottoMatik PCSO result endpoint, with a bundled archive for offline use. Lottery names, marks, and result data remain the property of their respective owners. PCSO Live Lotto Results and Analysis is not an official PCSO product.
+          Live refreshes use the LottoMatik PCSO result endpoint, with a bundled archive for offline use. Lottery names, marks, and result data remain the property of their respective owners. PCSO Lotto Results & Analysis is not an official PCSO product.
         </Paragraph>
       </InfoCard>
       <InfoCard title="Key open-source licenses">
