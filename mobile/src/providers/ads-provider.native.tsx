@@ -6,6 +6,7 @@ import {
   useState,
   type PropsWithChildren,
 } from 'react';
+import { useNetInfo } from '@react-native-community/netinfo';
 import mobileAds, {
   AdsConsent,
   AdsConsentPrivacyOptionsRequirementStatus,
@@ -41,12 +42,16 @@ function privacyOptionsAreRequired(info: AdsConsentInfo): boolean {
  */
 export function AdsProvider({ children }: PropsWithChildren) {
   const { adsRemoved, ready: purchasesReady } = usePurchases();
+  const netInfo = useNetInfo();
   const [state, setState] = useState<NativeAdsState>(INITIAL_STATE);
   const initializationPromise = useRef<Promise<unknown> | null>(null);
+  const isOnline =
+    netInfo.isConnected === true && netInfo.isInternetReachable !== false;
 
   useEffect(() => {
     if (!purchasesReady) return;
     if (adsRemoved) return;
+    if (!isOnline) return;
 
     let active = true;
 
@@ -111,7 +116,7 @@ export function AdsProvider({ children }: PropsWithChildren) {
     return () => {
       active = false;
     };
-  }, [adsRemoved, purchasesReady]);
+  }, [adsRemoved, isOnline, purchasesReady]);
 
   const showPrivacyOptions = useCallback(async (): Promise<boolean> => {
     try {
@@ -130,14 +135,19 @@ export function AdsProvider({ children }: PropsWithChildren) {
   const value = useMemo<AdsContextValue>(
     () => ({
       ready: purchasesReady && (adsRemoved || state.ready),
-      canRequestAds: !adsRemoved && state.canRequestAds,
+      canRequestAds: isOnline && !adsRemoved && state.canRequestAds,
       adsEnabled:
-        purchasesReady && state.ready && state.canRequestAds && !adsRemoved,
+        isOnline &&
+        purchasesReady &&
+        state.ready &&
+        state.canRequestAds &&
+        !adsRemoved,
       privacyOptionsRequired: state.privacyOptionsRequired,
       showPrivacyOptions,
     }),
     [
       adsRemoved,
+      isOnline,
       purchasesReady,
       showPrivacyOptions,
       state.canRequestAds,

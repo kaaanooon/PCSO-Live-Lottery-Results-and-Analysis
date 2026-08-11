@@ -1,9 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { GAME_BY_CODE } from '../games';
 import {
   comparePick,
   crossCheckHistory,
+  describeRandomCombination,
   generateRandomCombination,
   parsePick,
   resultPageForGame,
@@ -31,6 +32,21 @@ describe('pick parsing and validation', () => {
     expect(new Set(jackpot).size).toBe(6);
     expect(jackpot).toEqual([...jackpot].sort((left, right) => left - right));
     expect(validatePick(digitGame, '6DL')).toEqual([]);
+  });
+
+  it('describes a generated combination and varies the next description', () => {
+    const random = vi.spyOn(Math, 'random').mockReturnValue(0);
+    const numbers = [1, 2, 3, 4, 5, 6];
+    const first = describeRandomCombination(numbers, GAME_BY_CODE.LOTTO42);
+    const second = describeRandomCombination(numbers, GAME_BY_CODE.LOTTO42, [], first);
+
+    expect(first).toBe(
+      'Nice balance: 3 even (02, 04, 06) and 3 odd (01, 03, 05).',
+    );
+    expect(second).toBe(
+      'Range profile: 6 low (01, 02, 03, 04, 05, 06), 0 high (none).',
+    );
+    random.mockRestore();
   });
 
   it('preserves positional leading zeroes for digit games', () => {

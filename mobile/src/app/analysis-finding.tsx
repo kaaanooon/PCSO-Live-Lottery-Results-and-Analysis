@@ -17,10 +17,10 @@ import {
   latestAnalysisDraws,
   type AnalysisFinding,
 } from '@/domain/analysis-navigation';
-import { GAME_BY_CODE, formatNumber, isLogicalGameCode, theoreticalOutcomeCount } from '@/domain/games';
-import { generateRandomCombination } from '@/domain/picks';
-import type { GameRule } from '@/domain/types';
-import { formatCount, formatDrawDate, formatDrawTime } from '@/lib/format';
+import { GAME_BY_CODE, formatNumber, isLogicalGameCode } from '@/domain/games';
+import { describeRandomCombination, generateRandomCombination } from '@/domain/picks';
+import type { GameRule, LotteryDraw } from '@/domain/types';
+import { formatDrawDate, formatDrawTime } from '@/lib/format';
 import { useDraws } from '@/providers/draws-provider';
 import { useAppTheme } from '@/providers/preferences-provider';
 import { palette, radius, spacing } from '@/theme/tokens';
@@ -102,7 +102,7 @@ function SummaryFinding({ analysis }: { analysis: GameAnalysis }) {
       </SectionCard>
       <SectionCard title="Least seen numbers">
         <NumberChipList rule={analysis.rule} tone="cold" values={analysis.coldNumbers} />
-        <Text style={[styles.helper, { color: colors.textMuted }]}>A low count does not make a number due.</Text>
+        <Text style={[styles.helper, { color: colors.textMuted }]}>These had the lowest count in these 10 draws.</Text>
       </SectionCard>
     </>
   );
@@ -439,94 +439,18 @@ function PositionFinding({ analysis }: { analysis: GameAnalysis }) {
   );
 }
 
-function describeRandomCombination(
-  numbers: readonly number[],
-  analysis: GameAnalysis,
-  previous: string | null,
-): string {
-  const drawCount = analysis.summary.drawCount;
-  const evenCount = numbers.filter((number) => number % 2 === 0).length;
-  const lowCount = numbers.filter(
-    (number) => number <= analysis.summary.lowBoundary,
-  ).length;
-  const sum = numbers.reduce((total, number) => total + number, 0);
-  const orderedForPairs = analysis.rule.ordered
-    ? numbers
-    : [...numbers].sort((left, right) => left - right);
-  const consecutivePairs = orderedForPairs
-    .slice(1)
-    .filter((number, index) => Math.abs(number - orderedForPairs[index]!) === 1)
-    .length;
-  const hotCount = numbers.filter((number) =>
-    analysis.hotNumbers.includes(number),
-  ).length;
-  const coldCount = numbers.filter((number) =>
-    analysis.coldNumbers.includes(number),
-  ).length;
-  const comments = [
-    'Pattern: ' + evenCount + ' even and ' + (numbers.length - evenCount) +
-      ' odd.',
-    'Range: ' + lowCount + ' low and ' + (numbers.length - lowCount) +
-      ' high, using ' + analysis.summary.lowBoundary + ' as the low-number limit.',
-    consecutivePairs
-      ? 'This pick has ' + consecutivePairs + ' consecutive pair' +
-        (consecutivePairs === 1 ? '' : 's') + '.'
-      : 'This pick has no consecutive pairs.',
-  ];
-
-  if (analysis.sumStatistics.average !== null) {
-    const relation = sum > analysis.sumStatistics.average
-      ? 'above'
-      : sum < analysis.sumStatistics.average
-        ? 'below'
-        : 'equal to';
-    comments.push(
-      'Its total is ' + sum + ', ' + relation + ' the ' +
-        analysis.sumStatistics.average.toFixed(1) + ' average in these latest ' +
-        drawCount + ' draws.',
-    );
-  }
-
-  if (analysis.hotNumbers.length) {
-    comments.push(
-      hotCount
-        ? 'It includes ' + hotCount + ' of the most-seen numbers in the latest ' +
-          drawCount + ' draws.'
-        : 'It includes none of the most-seen numbers in the latest ' + drawCount +
-          ' draws.',
-    );
-  }
-
-  if (analysis.coldNumbers.length) {
-    comments.push(
-      coldCount
-        ? 'It includes ' + coldCount + ' of the least-seen numbers in the latest ' +
-          drawCount + ' draws.'
-        : 'It includes none of the least-seen numbers in the latest ' + drawCount +
-          ' draws.',
-    );
-  }
-
-  if (analysis.rule.ordered) {
-    const distinct = new Set(numbers).size;
-    comments.push(
-      distinct === numbers.length
-        ? 'Every digit position is different in this random pick.'
-        : 'This random pick repeats ' + (numbers.length - distinct) +
-          ' digit position' + (numbers.length - distinct === 1 ? '' : 's') + '.',
-    );
-  }
-
-  const alternatives = comments.filter((comment) => comment !== previous);
-  return alternatives[Math.floor(Math.random() * alternatives.length)] ?? comments[0]!;
-}
-
-function RandomFinding({ analysis }: { analysis: GameAnalysis }) {
+function RandomFinding({
+  analysis,
+  draws,
+}: {
+  analysis: GameAnalysis;
+  draws: readonly LotteryDraw[];
+}) {
   const { colors } = useAppTheme();
   const { rule } = analysis;
   const [numbers, setNumbers] = useState(() => generateRandomCombination(rule));
   const [commentary, setCommentary] = useState(() =>
-    describeRandomCombination(numbers, analysis, null),
+    describeRandomCombination(numbers, rule, draws, null),
   );
   const [isGenerating, setIsGenerating] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -545,7 +469,7 @@ function RandomFinding({ analysis }: { analysis: GameAnalysis }) {
       const next = generateRandomCombination(rule);
       setNumbers(next);
       setCommentary((current) =>
-        describeRandomCombination(next, analysis, current),
+        describeRandomCombination(next, rule, draws, current),
       );
       setIsGenerating(false);
       timer.current = null;
@@ -565,7 +489,7 @@ function RandomFinding({ analysis }: { analysis: GameAnalysis }) {
             <Ionicons color={colors.primary} name="sparkles-outline" size={18} />
           )}
           <Text style={[styles.randomCommentText, { color: colors.text }]}>
-            {isGenerating ? 'Creating and describing a new random pick...' : commentary}
+            {isGenerating ? 'Generating best possible combination...' : commentary}
           </Text>
         </View>
         <ActionButton
@@ -575,16 +499,19 @@ function RandomFinding({ analysis }: { analysis: GameAnalysis }) {
           onPress={generate}
         />
       </SectionCard>
-      <Notice>
-        The numbers are completely random. The sentence only describes how the
-        pick compares with the latest draws; it does not predict the next draw.
-      </Notice>
-      <Text style={[styles.odds, { color: colors.textMuted }]}>Odds: 1 in {formatCount(theoreticalOutcomeCount(rule))}</Text>
     </>
   );
 }
 
-function FindingContent({ finding, analysis }: { finding: AnalysisFinding; analysis: GameAnalysis }) {
+function FindingContent({
+  finding,
+  analysis,
+  draws,
+}: {
+  finding: AnalysisFinding;
+  analysis: GameAnalysis;
+  draws: readonly LotteryDraw[];
+}) {
   switch (finding) {
     case 'summary': return <SummaryFinding analysis={analysis} />;
     case 'frequency': return <FrequencyFinding analysis={analysis} />;
@@ -596,7 +523,7 @@ function FindingContent({ finding, analysis }: { finding: AnalysisFinding; analy
     case 'position': return analysis.rule.ordered
       ? <PositionFinding analysis={analysis} />
       : <Notice>This finding only applies to exact-order games.</Notice>;
-    case 'random': return <RandomFinding analysis={analysis} />;
+    case 'random': return <RandomFinding analysis={analysis} draws={draws} />;
   }
 }
 
@@ -645,10 +572,7 @@ export default function AnalysisFindingScreen() {
               Latest {analysis.summary.drawCount} draws · {formatDrawDate(analysis.summary.selectedStartDate ?? '')} to {formatDrawDate(analysis.summary.selectedEndDate ?? '')}
             </Text>
           </View>
-          <FindingContent analysis={analysis} finding={finding} />
-          {finding !== 'random' ? (
-            <Notice tone="warning">Past results describe history only. They do not make any number more likely next time.</Notice>
-          ) : null}
+          <FindingContent analysis={analysis} draws={selectedDraws} finding={finding} />
         </>
       )}
     </Screen>
@@ -726,5 +650,4 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
   },
   randomCommentText: { flex: 1, fontSize: 11, lineHeight: 17, fontWeight: '700' },
-  odds: { paddingHorizontal: spacing.xs, fontSize: 10, lineHeight: 15, textAlign: 'center' },
 });

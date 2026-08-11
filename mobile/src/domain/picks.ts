@@ -2,6 +2,7 @@ import {
   GAME_CODES,
   effectiveMatchMode,
   formatCombination,
+  formatNumber,
   getGameRule,
   supportsMatchMode,
   toLogicalGameCode,
@@ -55,6 +56,106 @@ export function generateRandomCombination(rule: GameRule): number[] {
     available.splice(index, 1);
   }
   return rule.ordered ? selected : selected.sort((left, right) => left - right);
+}
+
+/** Describe a generated combination using simple patterns and recent draw counts. */
+export function describeRandomCombination(
+  numbers: readonly number[],
+  rule: GameRule,
+  draws: readonly LotteryDraw[] = [],
+  previous: string | null = null,
+): string {
+  const drawCount = draws.length;
+  const formatValues = (values: readonly number[]) =>
+    values.length
+      ? values.map((number) => formatNumber(number, rule)).join(', ')
+      : 'none';
+  const formattedCombination = formatValues(numbers);
+  const evenNumbers = numbers.filter((number) => number % 2 === 0);
+  const oddNumbers = numbers.filter((number) => number % 2 !== 0);
+  const lowBoundary = Math.floor((rule.minimum + rule.maximum) / 2);
+  const lowNumbers = numbers.filter((number) => number <= lowBoundary);
+  const highNumbers = numbers.filter((number) => number > lowBoundary);
+  const sum = numbers.reduce((total, number) => total + number, 0);
+  const orderedForPairs = rule.ordered
+    ? [...numbers]
+    : [...numbers].sort((left, right) => left - right);
+  const consecutivePairs = orderedForPairs.slice(1).flatMap((number, index) => {
+    const previousNumber = orderedForPairs[index]!;
+    return Math.abs(number - previousNumber) === 1
+      ? [`${formatNumber(previousNumber, rule)}-${formatNumber(number, rule)}`]
+      : [];
+  });
+  const comments = [
+    `${Math.abs(evenNumbers.length - oddNumbers.length) <= 1 ? 'Nice balance' : 'Number mix'}: ${evenNumbers.length} even (${formatValues(evenNumbers)}) and ${oddNumbers.length} odd (${formatValues(oddNumbers)}).`,
+    `Range profile: ${lowNumbers.length} low (${formatValues(lowNumbers)}), ${highNumbers.length} high (${formatValues(highNumbers)}).`,
+    consecutivePairs.length
+      ? `Notable pattern: consecutive pair${consecutivePairs.length === 1 ? '' : 's'} ${consecutivePairs.join(', ')}.`
+      : `Clean spread: no consecutive pair in ${formattedCombination}.`,
+  ];
+
+  if (drawCount > 0) {
+    const averageSum = draws.reduce(
+      (total, draw) => total + draw.numbers.reduce((drawTotal, number) => drawTotal + number, 0),
+      0,
+    ) / drawCount;
+    const relation = sum > averageSum ? 'above' : sum < averageSum ? 'below' : 'equal to';
+    comments.push(
+      `Total profile: ${sum}, ${relation} the latest-${drawCount} average of ${averageSum.toFixed(1)}.`,
+    );
+
+    const counts = new Map<number, number>();
+    for (let value = rule.minimum; value <= rule.maximum; value += 1) {
+      counts.set(value, 0);
+    }
+    draws.forEach((draw) => {
+      draw.numbers.forEach((number) => counts.set(number, (counts.get(number) ?? 0) + 1));
+    });
+    const observedCounts = [...counts.values()];
+    const maximumCount = Math.max(...observedCounts);
+    const minimumCount = Math.min(...observedCounts);
+
+    if (maximumCount !== minimumCount) {
+      const mostSeen = new Set(
+        [...counts.entries()]
+          .filter(([, count]) => count === maximumCount)
+          .map(([number]) => number),
+      );
+      const leastSeen = new Set(
+        [...counts.entries()]
+          .filter(([, count]) => count === minimumCount)
+          .map(([number]) => number),
+      );
+      const mostSeenIncluded = [...new Set(numbers.filter((number) => mostSeen.has(number)))];
+      const leastSeenIncluded = [...new Set(numbers.filter((number) => leastSeen.has(number)))];
+      comments.push(
+        mostSeenIncluded.length
+          ? `Recent highlight: ${formatValues(mostSeenIncluded)} ${mostSeenIncluded.length === 1 ? 'was' : 'were'} among the most-seen in ${drawCount} draws.`
+          : `Fresh mix: ${formattedCombination} skips the recent most-seen numbers.`,
+        leastSeenIncluded.length
+          ? `Fresh contrast: ${formatValues(leastSeenIncluded)} ${leastSeenIncluded.length === 1 ? 'was' : 'were'} among the least-seen in ${drawCount} draws.`
+          : `Steady mix: ${formattedCombination} skips the recent least-seen numbers.`,
+      );
+    }
+  }
+
+  if (rule.ordered) {
+    const digitCounts = numbers.reduce<Map<number, number>>((counts, number) => {
+      counts.set(number, (counts.get(number) ?? 0) + 1);
+      return counts;
+    }, new Map());
+    const repeatedDigits = [...digitCounts.entries()].filter(([, count]) => count > 1);
+    comments.push(
+      repeatedDigits.length === 0
+        ? `Clean digit mix: every position differs in ${formattedCombination}.`
+        : `Repeat pattern: ${repeatedDigits
+            .map(([number, count]) => `${formatNumber(number, rule)} (${count}x)`)
+            .join(', ')}.`,
+    );
+  }
+
+  const alternatives = comments.filter((comment) => comment !== previous);
+  return alternatives[Math.floor(Math.random() * alternatives.length)] ?? comments[0]!;
 }
 
 /** Return every validation problem so one edit can fix several fields. */

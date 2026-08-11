@@ -254,9 +254,6 @@ export default function SettingsScreen() {
         />
       </View>
 
-      <Text style={styles.footer}>
-        PCSO Lotto Results & Analysis is an informational companion, not a prediction or official ticket-validation service. For ages 18+.
-      </Text>
     </SettingsPage>
   );
 }
@@ -308,13 +305,6 @@ function makeStyles(colors: AppThemeColors) {
     rowCopy: { flex: 1, minWidth: 0 },
     rowTitle: { color: colors.text, fontSize: 14, lineHeight: 19, fontWeight: '900' },
     rowSubtitle: { marginTop: 2, color: colors.textMuted, fontSize: 11, lineHeight: 16 },
-    footer: {
-      paddingHorizontal: spacing.sm,
-      color: colors.textMuted,
-      fontSize: 11,
-      lineHeight: 17,
-      textAlign: 'center',
-    },
     pressed: { opacity: 0.64, backgroundColor: colors.surfaceAlt },
   });
 }

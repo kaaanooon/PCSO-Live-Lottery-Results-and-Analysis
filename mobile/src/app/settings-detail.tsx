@@ -259,11 +259,6 @@ function AboutContent() {
           This is a concise notice for key direct dependencies, not a complete replacement for the copyright and license texts distributed with each package and its transitive dependencies.
         </Paragraph>
       </InfoCard>
-      <InfoCard title="Responsible-use reminder">
-        <Paragraph>
-          For ages 18+. Historical statistics and generated combinations do not improve the odds of a fair lottery draw. Play only within limits you can afford.
-        </Paragraph>
-      </InfoCard>
     </>
   );
 }

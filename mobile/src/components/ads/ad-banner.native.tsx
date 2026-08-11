@@ -1,4 +1,13 @@
-import { Platform, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { useEffect, useState } from 'react';
+import {
+  InteractionManager,
+  Platform,
+  StyleSheet,
+  Text,
+  View,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
 import {
   BannerAd,
   BannerAdSize,
@@ -39,7 +48,22 @@ const BOTTOM_BANNER_UNIT_ID = productionOrTestId(
 function NativeBanner({ style, unitId }: NativeBannerProps) {
   const { adsEnabled } = useAds();
   const { colors } = useAppTheme();
-  if (!adsEnabled) return null;
+  const [canMount, setCanMount] = useState(false);
+
+  useEffect(() => {
+    if (!adsEnabled) return;
+
+    let active = true;
+    const task = InteractionManager.runAfterInteractions(() => {
+      if (active) setCanMount(true);
+    });
+    return () => {
+      active = false;
+      task.cancel();
+    };
+  }, [adsEnabled]);
+
+  if (!adsEnabled || !canMount) return null;
 
   return (
     <View

@@ -70,7 +70,7 @@ export default function AnalysisScreen() {
   const { draws } = useDraws();
   const { colors } = useAppTheme();
   const { adsEnabled, runBeforeAnalysis } = useAnalysisInterstitial();
-  const { navigate, navigating } = useGuardedNavigation();
+  const { navigate } = useGuardedNavigation();
   const [gameCode, setGameCode] = useState<LogicalGameCode>('UL58');
   const [slot, setSlot] = useState<AnalysisSlot>('ALL');
   const [hasAnalyzed, setHasAnalyzed] = useState(false);
@@ -147,7 +147,6 @@ export default function AnalysisScreen() {
             {findings.map((finding) => (
               <FindingButton
                 description={finding.description}
-                disabled={navigating}
                 icon={finding.icon as IconName}
                 key={finding.id}
                 onPress={() => openFinding(finding.id)}
@@ -160,9 +159,6 @@ export default function AnalysisScreen() {
         )
       ) : null}
 
-      <Notice tone="warning">
-        18+. Past results cannot predict the next draw. Every valid combination has equal odds.
-      </Notice>
     </Screen>
   );
 }

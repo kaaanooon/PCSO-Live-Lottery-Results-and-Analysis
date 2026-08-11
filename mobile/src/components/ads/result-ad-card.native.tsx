@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Image, Platform, StyleSheet, Text, View } from 'react-native';
+import { Image, InteractionManager, Platform, StyleSheet, Text, View } from 'react-native';
 import {
   NativeAd,
   NativeAdView,
@@ -54,24 +54,28 @@ export function ResultAdCard({ placement = 'results' }: ResultAdCardProps) {
       };
     }
 
-    void NativeAd.createForAdRequest(unitIdFor(placement), {
-      requestAgent: 'PCSO Lotto Results & Analysis',
-      startVideoMuted: true,
-    })
-      .then((ad) => {
-        if (!active) {
-          ad.destroy();
-          return;
-        }
-        loadedAd = ad;
-        setNativeAd(ad);
+    const task = InteractionManager.runAfterInteractions(() => {
+      if (!active) return;
+      void NativeAd.createForAdRequest(unitIdFor(placement), {
+        requestAgent: 'PCSO Lotto Results & Analysis',
+        startVideoMuted: true,
       })
-      .catch(() => {
-        // A failed ad request should never interrupt access to lottery results.
-      });
+        .then((ad) => {
+          if (!active) {
+            ad.destroy();
+            return;
+          }
+          loadedAd = ad;
+          setNativeAd(ad);
+        })
+        .catch(() => {
+          // A failed ad request should never interrupt access to lottery results.
+        });
+    });
 
     return () => {
       active = false;
+      task.cancel();
       loadedAd?.destroy();
     };
   }, [adsEnabled, canRequestAds, placement, ready]);

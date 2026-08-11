@@ -1,8 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 
 import { ActionButton } from '@/components/action-button';
 import { BottomBannerAd } from '@/components/ads/ad-banner';
@@ -12,7 +12,12 @@ import { Screen } from '@/components/screen';
 import { SectionCard } from '@/components/section-card';
 import { SegmentedControl } from '@/components/segmented-control';
 import { GAME_BY_CODE, formatNumber } from '@/domain/games';
-import { generateRandomCombination, parsePick, sortDrawsNewestFirst } from '@/domain/picks';
+import {
+  describeRandomCombination,
+  generateRandomCombination,
+  parsePick,
+  sortDrawsNewestFirst,
+} from '@/domain/picks';
 import { restoreSavedPicks, type SavedPick } from '@/domain/saved-picks';
 import type { DrawGameCode, LogicalGameCode, MatchMode } from '@/domain/types';
 import { useDraws } from '@/providers/draws-provider';
@@ -56,6 +61,16 @@ export default function PickEditorScreen() {
   const [editorError, setEditorError] = useState<string | null>(null);
   const [pageError, setPageError] = useState<string | null>(null);
   const [heatmapEnabled, setHeatmapEnabled] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generationCommentary, setGenerationCommentary] = useState<string | null>(null);
+  const generationTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(
+    () => () => {
+      if (generationTimer.current) clearTimeout(generationTimer.current);
+    },
+    [],
+  );
 
   useEffect(() => {
     let active = true;
@@ -179,8 +194,22 @@ export default function PickEditorScreen() {
     return counts;
   }, new Map());
 
+  const cancelGeneration = () => {
+    if (generationTimer.current) {
+      clearTimeout(generationTimer.current);
+      generationTimer.current = null;
+    }
+    setIsGenerating(false);
+  };
+
+  const clearGeneratedCommentary = () => {
+    cancelGeneration();
+    setGenerationCommentary(null);
+  };
+
   const resetForGame = (nextGameCode: LogicalGameCode) => {
     const nextRule = GAME_BY_CODE[nextGameCode];
+    clearGeneratedCommentary();
     setGameCode(nextGameCode);
     setInputs(Array(nextRule.pickCount).fill(''));
     setSlotCode(nextRule.slots?.[0]?.gameCode ?? nextRule.code);
@@ -194,15 +223,34 @@ export default function PickEditorScreen() {
   ];
 
   const generatePick = () => {
-    let numbers = generateRandomCombination(rule);
-    while (
-      (mode === 'rambolito' || mode === 'perm') &&
-      new Set(numbers).size === 1
-    ) {
-      numbers = generateRandomCombination(rule);
-    }
-    setInputs(numbers.map(String));
+    if (isGenerating) return;
+    setIsGenerating(true);
     setEditorError(null);
+    generationTimer.current = setTimeout(() => {
+      let numbers = generateRandomCombination(rule);
+      while (
+        (mode === 'rambolito' || mode === 'perm') &&
+        new Set(numbers).size === 1
+      ) {
+        numbers = generateRandomCombination(rule);
+      }
+      setInputs(numbers.map(String));
+      setGenerationCommentary((current) =>
+        describeRandomCombination(numbers, rule, comparableDraws, current),
+      );
+      setIsGenerating(false);
+      generationTimer.current = null;
+    }, 650);
+  };
+
+  const changeSlot = (nextSlot: DrawGameCode) => {
+    clearGeneratedCommentary();
+    setSlotCode(nextSlot);
+  };
+
+  const changeMode = (nextMode: MatchMode) => {
+    clearGeneratedCommentary();
+    setMode(nextMode);
   };
 
   const toggleHeatmap = (enabled: boolean) => {
@@ -211,14 +259,18 @@ export default function PickEditorScreen() {
   };
 
   const appendHeatmapValue = (value: number) => {
+    if (isGenerating) return;
     if (selectedNumbers.length >= rule.pickCount) return;
     if (!rule.repeatsAllowed && selectedNumbers.includes(value)) return;
+    setGenerationCommentary(null);
     setInputs(padInputs([...selectedNumbers, value]));
     setEditorError(null);
   };
 
   const removeLastHeatmapValue = () => {
+    if (isGenerating) return;
     if (selectedNumbers.length === 0) return;
+    setGenerationCommentary(null);
     setInputs(padInputs(selectedNumbers.slice(0, -1)));
     setEditorError(null);
   };
@@ -326,7 +378,7 @@ export default function PickEditorScreen() {
                 <SegmentedControl
                   accessibilityLabel="Choose draw time"
                   value={slotCode}
-                  onChange={setSlotCode}
+                  onChange={changeSlot}
                   segments={rule.slots.map((slot) => ({ label: slot.label, value: slot.gameCode }))}
                 />
               </View>
@@ -337,7 +389,7 @@ export default function PickEditorScreen() {
                 <SegmentedControl
                   accessibilityLabel="Choose play type"
                   value={mode}
-                  onChange={setMode}
+                  onChange={changeMode}
                   segments={modeSegments}
                 />
               </View>
@@ -393,8 +445,8 @@ export default function PickEditorScreen() {
                 <Pressable
                   accessibilityRole="button"
                   accessibilityLabel="Remove last selected number"
-                  accessibilityState={{ disabled: selectedNumbers.length === 0 }}
-                  disabled={selectedNumbers.length === 0}
+                  accessibilityState={{ disabled: selectedNumbers.length === 0 || isGenerating }}
+                  disabled={selectedNumbers.length === 0 || isGenerating}
                   onPress={removeLastHeatmapValue}
                   style={({ pressed }) => [
                     styles.backspaceButton,
@@ -402,7 +454,7 @@ export default function PickEditorScreen() {
                       backgroundColor: colors.input,
                       borderColor: isDark ? colors.border : palette.slate300,
                     },
-                    selectedNumbers.length === 0 && styles.disabled,
+                    (selectedNumbers.length === 0 || isGenerating) && styles.disabled,
                     pressed && styles.pressed,
                   ]}>
                   <Ionicons
@@ -418,7 +470,7 @@ export default function PickEditorScreen() {
                   const selectedCount = selectedCounts.get(item.value) ?? 0;
                   const additionsFull = selectedNumbers.length >= rule.pickCount;
                   const duplicateBlocked = !rule.repeatsAllowed && selectedCount > 0;
-                  const disabled = additionsFull || duplicateBlocked;
+                  const disabled = isGenerating || additionsFull || duplicateBlocked;
                   return (
                     <Pressable
                       key={item.value}
@@ -485,7 +537,7 @@ export default function PickEditorScreen() {
                   ))}
                 </View>
                 <Text style={[styles.heatmapHelper, { color: colors.textMuted }]}>
-                  Colors show relative frequency in the latest {comparableDraws.length} comparable draw{comparableDraws.length === 1 ? '' : 's'} and do not change the odds.
+                  Colors show relative frequency in the latest {comparableDraws.length} comparable draw{comparableDraws.length === 1 ? '' : 's'}.
                 </Text>
                 </>
               ) : null}
@@ -501,24 +553,38 @@ export default function PickEditorScreen() {
               </Text>
             ) : null}
 
+            {isGenerating || generationCommentary ? (
+              <View style={[styles.generationStatus, { backgroundColor: colors.surfaceAlt }]}>
+                {isGenerating ? (
+                  <ActivityIndicator color={colors.primary} size="small" />
+                ) : (
+                  <Ionicons color={colors.primary} name="sparkles-outline" size={18} />
+                )}
+                <Text style={[styles.generationStatusText, { color: colors.text }]}>
+                  {isGenerating
+                    ? 'Generating best possible combination...'
+                    : generationCommentary}
+                </Text>
+              </View>
+            ) : null}
+
             <View style={styles.editorActions}>
               <ActionButton
-                label="Generate pick"
+                disabled={isGenerating}
+                label={isGenerating ? 'Generating...' : 'Generate pick'}
                 icon="sparkles-outline"
                 variant="secondary"
                 onPress={generatePick}
                 style={styles.editorAction}
               />
               <ActionButton
+                disabled={isGenerating}
                 label={requestedId ? 'Update' : 'Save'}
                 icon="save-outline"
                 onPress={() => void save()}
                 style={styles.editorAction}
               />
             </View>
-            <Notice tone="warning">
-              For ages 18+. Generated picks have the same fair-draw odds as every other valid combination.
-            </Notice>
           </View>
         </SectionCard>
       )}
@@ -640,6 +706,15 @@ const styles = StyleSheet.create({
   },
   inputHint: { color: palette.slate600, fontSize: 11 },
   error: { color: palette.coral600, fontSize: 12, lineHeight: 17, fontWeight: '700' },
+  generationStatus: {
+    minHeight: 52,
+    padding: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    borderRadius: radius.md,
+  },
+  generationStatusText: { flex: 1, fontSize: 11, lineHeight: 16, fontWeight: '700' },
   editorActions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   editorAction: { flexGrow: 1, flexBasis: 190 },
 });

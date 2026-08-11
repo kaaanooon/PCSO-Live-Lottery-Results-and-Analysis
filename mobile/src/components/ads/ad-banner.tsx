@@ -5,8 +5,6 @@ import {
   type StyleProp,
   type ViewStyle,
 } from "react-native";
-import { useNetInfo } from "@react-native-community/netinfo";
-
 import { useAds } from "@/providers/ads-context";
 import { useAppTheme } from "@/providers/preferences-provider";
 
@@ -21,13 +19,8 @@ interface PreviewBannerProps extends BannerAdProps {
 function PreviewBanner({ placement, style }: PreviewBannerProps) {
   const { adsEnabled } = useAds();
   const { colors } = useAppTheme();
-  const netInfo = useNetInfo();
 
-  const isOnline =
-    netInfo.isConnected === true && netInfo.isInternetReachable !== false;
-
-  // Hide ads when disabled or offline
-  if (!adsEnabled || !isOnline) {
+  if (!adsEnabled) {
     return null;
   }
 

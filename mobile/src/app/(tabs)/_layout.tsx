@@ -39,13 +39,14 @@ export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
+        freezeOnBlur: true,
         headerShown: false,
         sceneStyle: { backgroundColor: colors.background },
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textMuted,
         tabBarLabelStyle: { fontSize: 12, fontWeight: '700', paddingBottom: 3 },
         tabBarStyle: {
-          height: 68,
+          minHeight: 68,
           paddingTop: 8,
           borderTopColor: colors.border,
           backgroundColor: colors.surface,

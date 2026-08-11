@@ -1,18 +1,18 @@
-import { createContext, useContext } from 'react';
+import { createContext, useContext } from "react";
 
-export const REMOVE_ADS_PRODUCT_ID = 'remove_ads_lifetime';
+export const REMOVE_ADS_PRODUCT_ID = "ad_free_lifetime";
 
 export type PurchaseStatus =
-  | 'loading'
-  | 'available'
-  | 'purchasing'
-  | 'restoring'
-  | 'purchased'
-  | 'pending'
-  | 'unavailable'
-  | 'error';
+  | "loading"
+  | "available"
+  | "purchasing"
+  | "restoring"
+  | "purchased"
+  | "pending"
+  | "unavailable"
+  | "error";
 
-export type RestorePurchaseResult = 'restored' | 'not-found' | 'unavailable';
+export type RestorePurchaseResult = "restored" | "not-found" | "unavailable";
 
 export interface PurchasesContextValue {
   /** True after cached state and current store ownership have been reconciled. */
@@ -30,10 +30,13 @@ export interface PurchasesContextValue {
   readonly restoreRemoveAds: () => Promise<RestorePurchaseResult>;
 }
 
-export const PurchasesContext = createContext<PurchasesContextValue | undefined>(undefined);
+export const PurchasesContext = createContext<
+  PurchasesContextValue | undefined
+>(undefined);
 
 export function usePurchases(): PurchasesContextValue {
   const context = useContext(PurchasesContext);
-  if (!context) throw new Error('usePurchases must be used inside a PurchasesProvider.');
+  if (!context)
+    throw new Error("usePurchases must be used inside a PurchasesProvider.");
   return context;
 }
