@@ -13,6 +13,11 @@ import { SectionCard } from '@/components/section-card';
 import { SegmentedControl } from '@/components/segmented-control';
 import { GAME_BY_CODE, formatNumber } from '@/domain/games';
 import {
+  FREQUENCY_BANDS,
+  frequencyBand,
+  type FrequencyBand as HeatBand,
+} from '@/domain/frequency-bands';
+import {
   describeRandomCombination,
   generateRandomCombination,
   parsePick,
@@ -27,22 +32,10 @@ import { palette, radius, spacing } from '@/theme/tokens';
 const STORAGE_KEY = '@lottolens-ph/picks/v1';
 const HEATMAP_SAMPLE_SIZE = 10;
 
-type HeatBand = 'hot' | 'warm' | 'neutral' | 'cool' | 'cold';
-
 interface HeatmapValue {
   readonly value: number;
   readonly count: number;
   readonly band: HeatBand;
-}
-
-function frequencyBand(count: number, minimum: number, maximum: number): HeatBand {
-  if (minimum === maximum) return 'neutral';
-  const relative = (count - minimum) / (maximum - minimum);
-  if (relative >= 0.8) return 'hot';
-  if (relative >= 0.6) return 'warm';
-  if (relative <= 0.2) return 'cold';
-  if (relative <= 0.4) return 'cool';
-  return 'neutral';
 }
 
 export default function PickEditorScreen() {
@@ -529,7 +522,7 @@ export default function PickEditorScreen() {
               {heatmapEnabled ? (
                 <>
                 <View style={styles.legendRow}>
-                  {(['hot', 'warm', 'neutral', 'cool', 'cold'] as const).map((band) => (
+                  {FREQUENCY_BANDS.map((band) => (
                     <View key={band} style={styles.legendItem}>
                       <View style={[styles.legendDot, heatmapBandColors[band]]} />
                       <Text style={[styles.legendText, { color: colors.textMuted }]}>{band}</Text>

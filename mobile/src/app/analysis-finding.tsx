@@ -4,12 +4,21 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { ActionButton } from '@/components/action-button';
+import {
+  DrawScatterChart,
+  DrawTotalsAreaChart,
+  FrequencyTrendChart,
+  GapDetailsTable,
+  LowHighDistributionChart,
+  ParityDonutChart,
+  PositionFrequencyChart,
+} from '@/components/analysis-charts';
 import { Notice } from '@/components/notice';
 import { NumberBalls } from '@/components/number-balls';
 import { Screen } from '@/components/screen';
 import { SectionCard } from '@/components/section-card';
 import { StatCard } from '@/components/stat-card';
-import { analyzeGame, type FrequencyRow, type GameAnalysis } from '@/domain/analysis';
+import { analyzeGame, type GameAnalysis } from '@/domain/analysis';
 import {
   ANALYSIS_FINDINGS,
   isAnalysisFinding,
@@ -17,6 +26,11 @@ import {
   latestAnalysisDraws,
   type AnalysisFinding,
 } from '@/domain/analysis-navigation';
+import {
+  FREQUENCY_BANDS,
+  rankFrequencyRows,
+  type FrequencyBand,
+} from '@/domain/frequency-bands';
 import { GAME_BY_CODE, formatNumber, isLogicalGameCode } from '@/domain/games';
 import { describeRandomCombination, generateRandomCombination } from '@/domain/picks';
 import type { GameRule, LotteryDraw } from '@/domain/types';
@@ -71,6 +85,94 @@ function NumberChipList({
   );
 }
 
+interface NumberMetricItem {
+  readonly key: string;
+  readonly number: string;
+  readonly primary: string;
+  readonly secondary?: string;
+  readonly band: FrequencyBand;
+  readonly accessibilityLabel: string;
+}
+
+function useFrequencyBandColors() {
+  const { colors, isDark } = useAppTheme();
+  return useMemo<
+    Readonly<Record<FrequencyBand, { readonly backgroundColor: string; readonly borderColor: string }>>
+  >(
+    () => ({
+      hot: {
+        backgroundColor: isDark ? '#3B1F29' : palette.coral100,
+        borderColor: isDark ? colors.danger : palette.coral600,
+      },
+      warm: {
+        backgroundColor: isDark ? '#3A2E16' : palette.gold100,
+        borderColor: palette.gold500,
+      },
+      neutral: {
+        backgroundColor: colors.surfaceAlt,
+        borderColor: colors.border,
+      },
+      cool: {
+        backgroundColor: isDark ? '#123848' : palette.teal100,
+        borderColor: isDark ? colors.primary : palette.teal600,
+      },
+      cold: {
+        backgroundColor: isDark ? '#16253A' : '#E8EEF7',
+        borderColor: isDark ? '#6E97C5' : palette.navy800,
+      },
+    }),
+    [colors.border, colors.danger, colors.primary, colors.surfaceAlt, isDark],
+  );
+}
+
+function HeatLegend() {
+  const { colors } = useAppTheme();
+  const bandColors = useFrequencyBandColors();
+  return (
+    <View style={styles.legendRow}>
+      {FREQUENCY_BANDS.map((band) => (
+        <View key={band} style={styles.legendItem}>
+          <View style={[styles.legendDot, bandColors[band]]} />
+          <Text style={[styles.legendText, { color: colors.textMuted }]}>{band}</Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+function NumberMetricGrid({
+  items,
+  showLegend = false,
+}: {
+  items: readonly NumberMetricItem[];
+  showLegend?: boolean;
+}) {
+  const { colors } = useAppTheme();
+  const bandColors = useFrequencyBandColors();
+  return (
+    <>
+      <View style={styles.metricGrid}>
+        {items.map((item) => (
+          <View
+            accessible
+            accessibilityLabel={item.accessibilityLabel}
+            key={item.key}
+            style={[styles.metricCell, bandColors[item.band]]}>
+            <Text style={[styles.metricNumber, { color: colors.text }]}>{item.number}</Text>
+            <Text style={[styles.metricPrimary, { color: colors.text }]}>{item.primary}</Text>
+            {item.secondary ? (
+              <Text numberOfLines={1} style={[styles.metricSecondary, { color: colors.textMuted }]}>
+                {item.secondary}
+              </Text>
+            ) : null}
+          </View>
+        ))}
+      </View>
+      {showLegend ? <HeatLegend /> : null}
+    </>
+  );
+}
+
 function SummaryFinding({ analysis }: { analysis: GameAnalysis }) {
   const { colors } = useAppTheme();
   const commonParity = [...analysis.parityDistribution].sort(
@@ -98,147 +200,48 @@ function SummaryFinding({ analysis }: { analysis: GameAnalysis }) {
       </SectionCard>
       <SectionCard title="Most seen numbers">
         <NumberChipList rule={analysis.rule} tone="hot" values={analysis.hotNumbers} />
-        <Text style={[styles.helper, { color: colors.textMuted }]}>These had the highest count in these 10 draws.</Text>
+        <Text style={[styles.helper, { color: colors.textMuted }]}>These had the highest count in the latest {analysis.summary.drawCount} draws.</Text>
       </SectionCard>
       <SectionCard title="Least seen numbers">
         <NumberChipList rule={analysis.rule} tone="cold" values={analysis.coldNumbers} />
-        <Text style={[styles.helper, { color: colors.textMuted }]}>These had the lowest count in these 10 draws.</Text>
+        <Text style={[styles.helper, { color: colors.textMuted }]}>These had the lowest count in the latest {analysis.summary.drawCount} draws.</Text>
       </SectionCard>
     </>
   );
 }
 
-function FrequencyBar({
-  row,
-  maximum,
-  drawCount,
-}: {
-  row: FrequencyRow;
-  maximum: number;
-  drawCount: number;
-}) {
-  const { colors } = useAppTheme();
-  const tone = row.temperature === 'Sample hot'
-    ? colors.danger
-    : row.temperature === 'Sample cold'
-      ? palette.blue600
-      : colors.primary;
-  const status = row.temperature.replace('Sample ', '');
-
-  return (
-    <View
-      accessible
-      accessibilityLabel={`Number ${row.number}: ${row.appearanceCount} appearances in ${row.drawHitCount} draws.`}
-      style={[styles.frequencyRow, { borderBottomColor: colors.border }]}>
-      <View style={[styles.frequencyNumber, { backgroundColor: tone }]}>
-        <Text style={styles.frequencyNumberText}>{row.number}</Text>
-      </View>
-      <View style={styles.frequencyBody}>
-        <View style={styles.frequencyHeading}>
-          <Text style={[styles.frequencyCount, { color: colors.text }]}>{row.appearanceCount} time{row.appearanceCount === 1 ? '' : 's'}</Text>
-          <Text style={[styles.frequencyStatus, { color: tone }]}>{status}</Text>
-        </View>
-        <View style={[styles.barTrack, { backgroundColor: colors.surfaceAlt }]}>
-          <View
-            style={[
-              styles.barFill,
-              {
-                backgroundColor: tone,
-                width: `${row.appearanceCount === 0 ? 0 : Math.max(5, (row.appearanceCount / maximum) * 100)}%` as `${number}%`,
-              },
-            ]}
-          />
-        </View>
-        <Text style={[styles.frequencyMeta, { color: colors.textMuted }]}>
-          In {row.drawHitCount} of {drawCount} draws · {row.drawHitRatePct.toFixed(0)}% draw rate · expected {row.expectedCount.toFixed(1)}
-        </Text>
-      </View>
-    </View>
-  );
-}
-
 function FrequencyFinding({ analysis }: { analysis: GameAnalysis }) {
   const { colors } = useAppTheme();
-  const rows = [...analysis.frequency].sort(
-    (left, right) => right.appearanceCount - left.appearanceCount || left.numericValue - right.numericValue,
-  );
-  const maximum = Math.max(1, ...rows.map((row) => row.appearanceCount));
+  const items = rankFrequencyRows(analysis.frequency).map(({ row, band }) => ({
+    key: String(row.numericValue),
+    number: row.number,
+    primary: `${row.appearanceCount}x`,
+    secondary: `${row.drawHitRatePct.toFixed(0)}%`,
+    band,
+    accessibilityLabel: `Number ${row.number}, ${row.appearanceCount} appearances in ${row.drawHitCount} of ${analysis.summary.drawCount} draws, ${band}.`,
+  }));
 
   return (
-    <SectionCard title="Every number" subtitle="Ranked from most to least appearances.">
+    <SectionCard
+      title="Every number"
+      subtitle={`Most seen first. Counts use the latest ${analysis.summary.drawCount} draws.`}>
       <View style={[styles.tableHeader, { backgroundColor: colors.surfaceAlt }]}>
         <Text style={[styles.tableHeaderText, { color: colors.textMuted }]}>COUNTING ALL {analysis.summary.numberObservations} DRAWN VALUES</Text>
       </View>
-      {rows.map((row) => (
-        <FrequencyBar
-          drawCount={analysis.summary.drawCount}
-          key={row.numericValue}
-          maximum={maximum}
-          row={row}
-        />
-      ))}
+      <NumberMetricGrid items={items} showLegend />
+      <Text style={[styles.helper, { color: colors.textMuted }]}>Color is relative to this selected set; each tile also shows its exact count and draw rate.</Text>
     </SectionCard>
   );
 }
 
 function NumberChartFinding({ analysis }: { analysis: GameAnalysis }) {
-  const { colors, isDark } = useAppTheme();
+  const { colors } = useAppTheme();
   const features = analysis.drawFeatures;
-  const { minimum, maximum } = analysis.rule;
-  const valueSpan = Math.max(1, maximum - minimum);
 
   return (
     <>
-      <SectionCard title="Number chart" subtitle="Each dot is one drawn value. Newest draws are on the right.">
-        <View
-          accessible
-          accessibilityLabel={`Number chart for ${features.length} draws from ${minimum} through ${maximum}.`}
-          accessibilityRole="image"
-          style={styles.scatterFigure}>
-          <View style={styles.scatterRow}>
-            <View style={styles.scatterLabels}>
-              <Text style={[styles.axisLabel, { color: colors.textMuted }]}>{maximum}</Text>
-              <Text style={[styles.axisLabel, { color: colors.textMuted }]}>{Math.round((minimum + maximum) / 2)}</Text>
-              <Text style={[styles.axisLabel, { color: colors.textMuted }]}>{minimum}</Text>
-            </View>
-            <View style={[styles.scatterPlot, { backgroundColor: colors.input, borderColor: colors.border }]}>
-              {[0, 50, 100].map((position) => (
-                <View
-                  key={position}
-                  style={[styles.gridLine, { backgroundColor: colors.border, bottom: `${position}%` as `${number}%` }]}
-                />
-              ))}
-              {features.flatMap((feature, drawIndex) =>
-                feature.numbers.map((number, numberIndex) => {
-                  const baseLeft = features.length === 1 ? 50 : 3 + (drawIndex / (features.length - 1)) * 94;
-                  const offset = (numberIndex - (feature.numbers.length - 1) / 2) * 0.55;
-                  const left = Math.max(1, Math.min(97, baseLeft + offset));
-                  const bottom = 2 + ((number - minimum) / valueSpan) * 96;
-                  return (
-                    <View
-                      key={`${feature.index}-${numberIndex}-${number}`}
-                      style={[
-                        styles.scatterDot,
-                        analysis.rule.ordered && styles.orderedDot,
-                        {
-                          backgroundColor: analysis.rule.ordered
-                            ? isDark ? colors.danger : palette.coral600
-                            : colors.primary,
-                          bottom: `${bottom}%` as `${number}%`,
-                          left: `${left}%` as `${number}%`,
-                        },
-                      ]}
-                    />
-                  );
-                }),
-              )}
-            </View>
-          </View>
-          <View style={styles.axisDates}>
-            <Text style={[styles.axisLabel, { color: colors.textMuted }]}>{formatDrawDate(features[0]?.date ?? '')}</Text>
-            <Text style={[styles.axisLabel, { color: colors.textMuted }]}>{formatDrawDate(features.at(-1)?.date ?? '')}</Text>
-          </View>
-        </View>
+      <SectionCard title="Draw scatter" subtitle={`Every drawn value across ${features.length} draws. Newest is on the right.`}>
+        <DrawScatterChart analysis={analysis} />
       </SectionCard>
       <SectionCard title="Draws shown">
         {features.map((feature) => (
@@ -256,73 +259,23 @@ function NumberChartFinding({ analysis }: { analysis: GameAnalysis }) {
 }
 
 function TrendFinding({ analysis }: { analysis: GameAnalysis }) {
-  const { colors } = useAppTheme();
-  const split = Math.max(1, Math.floor(analysis.drawFeatures.length / 2));
-  const older = analysis.drawFeatures.slice(0, split);
-  const recent = analysis.drawFeatures.slice(split);
-  const count = (features: typeof analysis.drawFeatures, number: number) =>
-    features.reduce(
-      (total, feature) => total + feature.numbers.filter((value) => value === number).length,
-      0,
-    );
-  const rows = analysis.frequency
-    .map((row) => {
-      const olderCount = count(older, row.numericValue);
-      const recentCount = count(recent, row.numericValue);
-      return { row, olderCount, recentCount, difference: recentCount - olderCount };
-    })
-    .sort((left, right) => right.difference - left.difference || left.row.numericValue - right.row.numericValue);
-
   return (
-    <SectionCard title="Every number" subtitle={`${older.length} older draws compared with ${recent.length} newer draws.`}>
-      {rows.map(({ row, olderCount, recentCount, difference }) => {
-        const color = difference > 0 ? colors.danger : difference < 0 ? palette.blue600 : colors.textMuted;
-        const icon = difference > 0 ? 'arrow-up' : difference < 0 ? 'arrow-down' : 'remove';
-        return (
-          <View key={row.numericValue} style={[styles.trendRow, { borderBottomColor: colors.border }]}>
-            <NumberChip rule={analysis.rule} tone="normal" value={row.numericValue} />
-            <View style={styles.trendCounts}>
-              <Text style={[styles.trendMain, { color: colors.text }]}>{olderCount} before → {recentCount} recent</Text>
-              <Text style={[styles.trendMeta, { color: colors.textMuted }]}>All 10 draws: {row.appearanceCount}</Text>
-            </View>
-            <View style={[styles.trendBadge, { backgroundColor: colors.surfaceAlt }]}>
-              <Ionicons color={color} name={icon} size={16} />
-              <Text style={[styles.trendDifference, { color }]}>{difference > 0 ? `+${difference}` : difference}</Text>
-            </View>
-          </View>
-        );
-      })}
+    <SectionCard title="Older versus newer" subtitle="Two lines compare equally sized halves of the analyzed draws.">
+      <FrequencyTrendChart analysis={analysis} />
     </SectionCard>
   );
 }
 
 function GapsFinding({ analysis }: { analysis: GameAnalysis }) {
-  const { colors } = useAppTheme();
-  const rows = [...analysis.frequency].sort((left, right) => left.numericValue - right.numericValue);
-
   return (
-    <SectionCard title="Every number" subtitle="Since means draws since its latest appearance, not days.">
-      <View style={[styles.gapRow, styles.gapHeader, { backgroundColor: colors.surfaceAlt }]}>
-        <Text style={[styles.gapNumber, styles.headerText, { color: colors.text }]}>No.</Text>
-        <Text style={[styles.gapMetric, styles.headerText, { color: colors.text }]}>Since</Text>
-        <Text style={[styles.gapMetric, styles.headerText, { color: colors.text }]}>Avg gap</Text>
-        <Text style={[styles.gapDate, styles.headerText, { color: colors.text }]}>Last seen</Text>
-      </View>
-      {rows.map((row) => (
-        <View key={row.numericValue} style={[styles.gapRow, { borderBottomColor: colors.border }]}>
-          <Text style={[styles.gapNumber, styles.gapValue, { color: colors.text }]}>{row.number}</Text>
-          <Text style={[styles.gapMetric, styles.gapValue, { color: colors.textMuted }]}>{row.drawsSinceLast ?? 'Not in 10'}</Text>
-          <Text style={[styles.gapMetric, styles.gapValue, { color: colors.textMuted }]}>{row.meanGapDraws?.toFixed(1) ?? '-'}</Text>
-          <Text style={[styles.gapDate, styles.gapValue, { color: colors.textMuted }]}>{row.lastSeen ? formatDrawDate(row.lastSeen) : '-'}</Text>
-        </View>
-      ))}
+    <SectionCard title="Last seen and gaps" subtitle="Every number is ordered from longest current gap to shortest.">
+      <GapDetailsTable analysis={analysis} />
     </SectionCard>
   );
 }
 
 function ParityFinding({ analysis }: { analysis: GameAnalysis }) {
   const { colors } = useAppTheme();
-  const maximum = Math.max(1, ...analysis.parityDistribution.map((row) => row.observedPct));
 
   return (
     <>
@@ -331,17 +284,20 @@ function ParityFinding({ analysis }: { analysis: GameAnalysis }) {
           <StatCard label="Even values" value={`${analysis.summary.evenOccurrences} · ${analysis.summary.evenOccurrencePct.toFixed(0)}%`} tone="teal" />
           <StatCard label="Odd values" value={`${analysis.summary.oddOccurrences} · ${analysis.summary.oddOccurrencePct.toFixed(0)}%`} tone="gold" />
         </View>
+        <ParityDonutChart analysis={analysis} />
       </SectionCard>
-      <SectionCard title="Mix per draw" subtitle="Observed is what happened in these 10 draws; fair is the long-run mathematical share.">
+      <SectionCard title="Mix per draw" subtitle={`Observed across ${analysis.summary.drawCount} draws; fair is the long-run mathematical share.`}>
         {analysis.parityDistribution.map((row) => (
-          <View key={row.pattern} style={[styles.parityRow, { borderBottomColor: colors.border }]}>
-            <Text style={[styles.parityPattern, { color: colors.text }]}>{row.evenCount} even / {row.oddCount} odd</Text>
-            <View style={styles.parityBody}>
-              <View style={[styles.barTrack, { backgroundColor: colors.surfaceAlt }]}>
-                <View style={[styles.barFill, { backgroundColor: colors.primary, width: `${(row.observedPct / maximum) * 100}%` as `${number}%` }]} />
-              </View>
-              <Text style={[styles.frequencyMeta, { color: colors.textMuted }]}>{row.drawCount} draws · observed {row.observedPct.toFixed(0)}% · fair {row.theoreticalPct.toFixed(0)}%</Text>
+          <View key={row.pattern} style={[styles.distributionRow, { borderBottomColor: colors.border }]}>
+            <View style={styles.distributionHeading}>
+              <Text style={[styles.distributionLabel, { color: colors.text }]}>{row.evenCount} even / {row.oddCount} odd</Text>
+              <Text style={[styles.distributionDetail, { color: colors.textMuted }]}>{row.drawCount} draws · {row.observedPct.toFixed(0)}%</Text>
             </View>
+            <View style={[styles.distributionTrack, { backgroundColor: colors.surfaceAlt }]}>
+              <View style={[styles.distributionFill, { backgroundColor: colors.primary, width: `${row.observedPct}%` as `${number}%` }]} />
+              <View style={[styles.fairMarker, { backgroundColor: colors.danger, left: `${row.theoreticalPct}%` as `${number}%` }]} />
+            </View>
+            <Text style={[styles.distributionFair, { color: colors.textMuted }]}>Red marker: {row.theoreticalPct.toFixed(0)}% fair share</Text>
           </View>
         ))}
       </SectionCard>
@@ -353,7 +309,12 @@ function PatternTags({
   rows,
   empty,
 }: {
-  rows: readonly { key: string; drawSupportCount: number }[];
+  rows: readonly {
+    key: string;
+    occurrenceCount: number;
+    drawSupportCount: number;
+    drawSupportPct: number;
+  }[];
   empty: string;
 }) {
   const { colors } = useAppTheme();
@@ -362,7 +323,9 @@ function PatternTags({
       {rows.map((row) => (
         <View key={row.key} style={[styles.patternTag, { backgroundColor: colors.surfaceAlt }]}>
           <Text style={[styles.patternKey, { color: colors.text }]}>{row.key}</Text>
-          <Text style={[styles.patternCount, { color: colors.textMuted }]}>{row.drawSupportCount} draw{row.drawSupportCount === 1 ? '' : 's'}</Text>
+          <Text style={[styles.patternCount, { color: colors.textMuted }]}>
+            {row.occurrenceCount}x · {row.drawSupportCount} draw{row.drawSupportCount === 1 ? '' : 's'} · {row.drawSupportPct.toFixed(0)}%
+          </Text>
         </View>
       ))}
     </View>
@@ -372,8 +335,6 @@ function PatternTags({
 }
 
 function PatternsFinding({ analysis }: { analysis: GameAnalysis }) {
-  const { colors } = useAppTheme();
-
   return (
     <>
       <SectionCard title="Totals and repeats">
@@ -385,12 +346,7 @@ function PatternsFinding({ analysis }: { analysis: GameAnalysis }) {
         </View>
       </SectionCard>
       <SectionCard title="Low and high mix" subtitle={`Low ${analysis.rule.minimum}-${analysis.summary.lowBoundary}; high ${analysis.summary.highBoundary}-${analysis.rule.maximum}.`}>
-        {analysis.lowHighDistribution.map((row) => (
-          <View key={row.pattern} style={[styles.simpleRow, { borderBottomColor: colors.border }]}>
-            <Text style={[styles.simpleTitle, { color: colors.text }]}>{row.lowCount} low / {row.highCount} high</Text>
-            <Text style={[styles.simpleValue, { color: colors.textMuted }]}>{row.drawCount} draws · {row.observedPct.toFixed(0)}%</Text>
-          </View>
-        ))}
+        <LowHighDistributionChart analysis={analysis} />
       </SectionCard>
       <SectionCard title={analysis.rule.ordered ? 'Common adjacent steps' : 'Common pairs'}>
         <PatternTags empty="No pairs were available." rows={analysis.pairFrequency.slice(0, 20)} />
@@ -398,44 +354,18 @@ function PatternsFinding({ analysis }: { analysis: GameAnalysis }) {
       <SectionCard title="Common triples">
         <PatternTags empty="Triple analysis does not apply or no triples were available." rows={analysis.tripleFrequency.slice(0, 20)} />
       </SectionCard>
-      <SectionCard title="Total for each draw">
-        {analysis.drawFeatures.map((feature) => (
-          <View key={`${feature.gameCode}-${feature.date}-${feature.time}`} style={[styles.simpleRow, { borderBottomColor: colors.border }]}>
-            <Text style={[styles.simpleTitle, { color: colors.text }]}>{formatDrawDate(feature.date)} · {formatDrawTime(feature.time)}</Text>
-            <Text style={[styles.simpleValue, { color: colors.primary }]}>Total {feature.sum}</Text>
-          </View>
-        ))}
+      <SectionCard title="Totals over time" subtitle="The area line connects each draw total in date order.">
+        <DrawTotalsAreaChart analysis={analysis} />
       </SectionCard>
     </>
   );
 }
 
 function PositionFinding({ analysis }: { analysis: GameAnalysis }) {
-  const { colors } = useAppTheme();
-
   return (
-    <>
-      {Array.from({ length: analysis.rule.pickCount }, (_, index) => {
-        const position = index + 1;
-        const rows = analysis.positionFrequency.filter((row) => row.position === position);
-        const maximum = Math.max(1, ...rows.map((row) => row.count));
-        return (
-          <SectionCard key={position} title={`Position ${position}`} subtitle="Every possible value is shown.">
-            {rows.map((row) => (
-              <View key={`${position}-${row.numericValue}`} style={[styles.positionRow, { borderBottomColor: colors.border }]}>
-                <Text style={[styles.positionNumber, { color: colors.text }]}>{row.number}</Text>
-                <View style={styles.positionBody}>
-                  <View style={[styles.barTrack, { backgroundColor: colors.surfaceAlt }]}>
-                    <View style={[styles.barFill, { backgroundColor: colors.primary, width: `${row.count ? Math.max(5, (row.count / maximum) * 100) : 0}%` as `${number}%` }]} />
-                  </View>
-                </View>
-                <Text style={[styles.positionCount, { color: colors.textMuted }]}>{row.count} · {row.ratePct.toFixed(0)}%</Text>
-              </View>
-            ))}
-          </SectionCard>
-        );
-      })}
-    </>
+    <SectionCard title="Position comparison" subtitle="Each colored line represents one exact position in the draw.">
+      <PositionFrequencyChart analysis={analysis} />
+    </SectionCard>
   );
 }
 
@@ -590,56 +520,40 @@ const styles = StyleSheet.create({
   helper: { fontSize: 10, lineHeight: 15 },
   tableHeader: { paddingHorizontal: spacing.sm, paddingVertical: 7, borderRadius: radius.sm },
   tableHeaderText: { fontSize: 8, lineHeight: 11, fontWeight: '900', letterSpacing: 0.7 },
-  frequencyRow: { paddingVertical: spacing.sm, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderBottomWidth: StyleSheet.hairlineWidth },
-  frequencyNumber: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center', borderRadius: radius.pill },
-  frequencyNumberText: { color: palette.white, fontSize: 11, fontWeight: '900' },
-  frequencyBody: { flex: 1, minWidth: 0, gap: 5 },
-  frequencyHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
-  frequencyCount: { fontSize: 11, fontWeight: '900' },
-  frequencyStatus: { fontSize: 9, fontWeight: '900' },
-  frequencyMeta: { fontSize: 9, lineHeight: 13 },
-  barTrack: { height: 7, flex: 1, overflow: 'hidden', borderRadius: radius.pill },
-  barFill: { height: '100%', borderRadius: radius.pill },
-  scatterFigure: { gap: spacing.xs },
-  scatterRow: { height: 240, flexDirection: 'row', gap: 6 },
-  scatterLabels: { width: 28, justifyContent: 'space-between', alignItems: 'flex-end' },
-  scatterPlot: { flex: 1, position: 'relative', overflow: 'hidden', borderWidth: 1, borderRadius: radius.md },
-  gridLine: { position: 'absolute', right: 0, left: 0, height: StyleSheet.hairlineWidth },
-  scatterDot: { position: 'absolute', width: 8, height: 8, marginLeft: -4, marginBottom: -4, borderRadius: 4 },
-  orderedDot: { borderRadius: 2 },
-  axisLabel: { fontSize: 8, lineHeight: 11, fontWeight: '700' },
-  axisDates: { marginLeft: 34, flexDirection: 'row', justifyContent: 'space-between' },
+  metricGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  metricCell: {
+    width: 48,
+    minHeight: 58,
+    paddingHorizontal: 4,
+    paddingVertical: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderRadius: radius.sm,
+  },
+  metricNumber: { fontSize: 14, lineHeight: 17, fontWeight: '900' },
+  metricPrimary: { marginTop: 2, fontSize: 9, lineHeight: 12, fontWeight: '900', textAlign: 'center' },
+  metricSecondary: { marginTop: 1, fontSize: 8, lineHeight: 10, fontWeight: '700', textAlign: 'center' },
+  legendRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  legendDot: { width: 12, height: 12, borderWidth: 1, borderRadius: 3 },
+  legendText: { fontSize: 9, lineHeight: 12, fontWeight: '700', textTransform: 'capitalize' },
+  distributionRow: { paddingVertical: spacing.sm, gap: 5, borderBottomWidth: StyleSheet.hairlineWidth },
+  distributionHeading: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.sm },
+  distributionLabel: { flex: 1, fontSize: 10, lineHeight: 14, fontWeight: '900' },
+  distributionDetail: { flexShrink: 1, fontSize: 8, lineHeight: 12, fontWeight: '700', textAlign: 'right' },
+  distributionTrack: { height: 9, position: 'relative', overflow: 'hidden', borderRadius: radius.pill },
+  distributionFill: { height: '100%', borderRadius: radius.pill },
+  fairMarker: { width: 2, position: 'absolute', top: 0, bottom: 0 },
+  distributionFair: { fontSize: 8, lineHeight: 11, textAlign: 'right' },
   drawRow: { paddingVertical: spacing.sm, gap: spacing.sm, borderBottomWidth: StyleSheet.hairlineWidth },
   drawCopy: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.sm },
   drawDate: { fontSize: 10, fontWeight: '900' },
   drawTime: { fontSize: 10, fontWeight: '900' },
-  trendRow: { paddingVertical: spacing.sm, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderBottomWidth: StyleSheet.hairlineWidth },
-  trendCounts: { flex: 1, minWidth: 0 },
-  trendMain: { fontSize: 11, fontWeight: '900' },
-  trendMeta: { marginTop: 2, fontSize: 9 },
-  trendBadge: { minWidth: 50, height: 30, paddingHorizontal: 6, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 2, borderRadius: radius.pill },
-  trendDifference: { fontSize: 10, fontWeight: '900' },
-  gapRow: { minHeight: 42, paddingVertical: 6, flexDirection: 'row', alignItems: 'center', borderBottomWidth: StyleSheet.hairlineWidth },
-  gapHeader: { minHeight: 36, paddingHorizontal: 4, borderBottomWidth: 0, borderRadius: radius.sm },
-  gapNumber: { width: 42 },
-  gapMetric: { width: 64, textAlign: 'center' },
-  gapDate: { flex: 1, textAlign: 'right' },
-  headerText: { fontSize: 9, fontWeight: '900' },
-  gapValue: { fontSize: 9, fontWeight: '700' },
-  parityRow: { paddingVertical: spacing.sm, gap: spacing.sm, borderBottomWidth: StyleSheet.hairlineWidth },
-  parityPattern: { fontSize: 11, fontWeight: '900' },
-  parityBody: { gap: 5 },
   patternList: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
-  patternTag: { minHeight: 42, paddingHorizontal: spacing.sm, paddingVertical: 6, justifyContent: 'center', borderRadius: radius.sm },
+  patternTag: { minHeight: 42, paddingHorizontal: spacing.sm, paddingVertical: 6, flexBasis: 110, flexGrow: 1, justifyContent: 'center', borderRadius: radius.sm },
   patternKey: { fontSize: 10, fontWeight: '900' },
   patternCount: { marginTop: 1, fontSize: 8, fontWeight: '700' },
-  simpleRow: { minHeight: 42, paddingVertical: spacing.sm, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md, borderBottomWidth: StyleSheet.hairlineWidth },
-  simpleTitle: { flex: 1, fontSize: 10, fontWeight: '900' },
-  simpleValue: { fontSize: 9, fontWeight: '800', textAlign: 'right' },
-  positionRow: { minHeight: 38, paddingVertical: 6, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderBottomWidth: StyleSheet.hairlineWidth },
-  positionNumber: { width: 34, fontSize: 10, fontWeight: '900' },
-  positionBody: { flex: 1 },
-  positionCount: { width: 62, fontSize: 9, fontWeight: '800', textAlign: 'right' },
   generatingCombination: { opacity: 0.42 },
   randomComment: {
     minHeight: 58,

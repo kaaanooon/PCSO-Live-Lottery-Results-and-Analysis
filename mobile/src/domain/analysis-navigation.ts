@@ -26,13 +26,13 @@ export const ANALYSIS_FINDINGS = [
   {
     id: 'chart',
     title: 'Number chart',
-    description: 'See where every drawn number appeared across 10 draws.',
+    description: 'See where every drawn number appeared across the analyzed draws.',
     icon: 'analytics-outline',
   },
   {
     id: 'trend',
     title: 'Recent trend',
-    description: 'Compare the latest five draws with the five before them.',
+    description: 'Compare the newer half of the draws with the older half.',
     icon: 'trending-up-outline',
   },
   {

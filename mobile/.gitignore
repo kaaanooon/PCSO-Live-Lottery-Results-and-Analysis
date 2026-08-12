@@ -51,3 +51,4 @@ example
 *.aab
 *.keystore
 credentials.json
+/credentials/
