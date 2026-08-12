@@ -6,6 +6,7 @@ import { ActivityIndicator, Pressable, StyleSheet, Switch, Text, View } from 're
 
 import { ActionButton } from '@/components/action-button';
 import { BottomBannerAd } from '@/components/ads/ad-banner';
+import { useGenerationInterstitial } from '@/components/ads/generation-interstitial';
 import { GamePicker } from '@/components/game-picker';
 import { Notice } from '@/components/notice';
 import { Screen } from '@/components/screen';
@@ -41,6 +42,7 @@ interface HeatmapValue {
 export default function PickEditorScreen() {
   const { colors, isDark } = useAppTheme();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
+  const { runBeforeGeneration } = useGenerationInterstitial('pick');
   const requestedId = Array.isArray(params.id) ? params.id[0] : params.id;
   const { draws } = useDraws();
   const [gameCode, setGameCode] = useState<LogicalGameCode>('LOTTO42');
@@ -57,9 +59,13 @@ export default function PickEditorScreen() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationCommentary, setGenerationCommentary] = useState<string | null>(null);
   const generationTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const generationInFlight = useRef(false);
+  const generationRequest = useRef(0);
 
   useEffect(
     () => () => {
+      generationRequest.current += 1;
+      generationInFlight.current = false;
       if (generationTimer.current) clearTimeout(generationTimer.current);
     },
     [],
@@ -188,6 +194,8 @@ export default function PickEditorScreen() {
   }, new Map());
 
   const cancelGeneration = () => {
+    generationRequest.current += 1;
+    generationInFlight.current = false;
     if (generationTimer.current) {
       clearTimeout(generationTimer.current);
       generationTimer.current = null;
@@ -216,24 +224,32 @@ export default function PickEditorScreen() {
   ];
 
   const generatePick = () => {
-    if (isGenerating) return;
+    if (generationInFlight.current) return;
+    generationInFlight.current = true;
+    const request = generationRequest.current + 1;
+    generationRequest.current = request;
     setIsGenerating(true);
     setEditorError(null);
-    generationTimer.current = setTimeout(() => {
-      let numbers = generateRandomCombination(rule);
-      while (
-        (mode === 'rambolito' || mode === 'perm') &&
-        new Set(numbers).size === 1
-      ) {
-        numbers = generateRandomCombination(rule);
-      }
-      setInputs(numbers.map(String));
-      setGenerationCommentary((current) =>
-        describeRandomCombination(numbers, rule, comparableDraws, current),
-      );
-      setIsGenerating(false);
-      generationTimer.current = null;
-    }, 650);
+    runBeforeGeneration(() => {
+      if (request !== generationRequest.current) return;
+      generationTimer.current = setTimeout(() => {
+        if (request !== generationRequest.current) return;
+        let numbers = generateRandomCombination(rule);
+        while (
+          (mode === 'rambolito' || mode === 'perm') &&
+          new Set(numbers).size === 1
+        ) {
+          numbers = generateRandomCombination(rule);
+        }
+        setInputs(numbers.map(String));
+        setGenerationCommentary((current) =>
+          describeRandomCombination(numbers, rule, comparableDraws, current),
+        );
+        generationInFlight.current = false;
+        setIsGenerating(false);
+        generationTimer.current = null;
+      }, 650);
+    });
   };
 
   const changeSlot = (nextSlot: DrawGameCode) => {

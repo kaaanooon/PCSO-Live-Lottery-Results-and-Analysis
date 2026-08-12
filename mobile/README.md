@@ -7,7 +7,7 @@ An Expo/React Native mobile app for browsing Philippine lottery results, checkin
 - **Results** — a date-based PCSO-blue-and-red results view ordered from Ultra Lotto 6/58 through 2D Lotto, with locally bundled game logos, compact previous/next navigation, prizes, and winner counts. The 2D and 3D cards keep their 2 PM, 5 PM, and 9 PM draws together.
 - **Pick** — choose a game, enter a valid combination, choose a draw slot when relevant, and compare it with the latest result and available archive. Saved picks persist on the device.
 - **Analysis** — choose a game and analyze its latest 10 draws. Analyze opens a short findings menu; each button has a dedicated page for summary, every-number frequency, chart, recent trend, gaps, even/odd, pairs/patterns, exact-order positions, or a fair random combination.
-- **Advertising** — Google Mobile Ads banners, native cards in results and each loaded history batch, and an Analysis interstitial every second Analyze action are integrated. Localhost renders labelled placement previews; native development builds use Google test ads until production IDs are configured.
+- **Advertising** — Google Mobile Ads banners, native cards in results and each loaded history batch, an Analysis interstitial every second Analyze action, and separate Pick/Analysis generator interstitials every fifth generation are integrated. Fullscreen placements share a 60-second cooldown. Localhost renders labelled placement previews; native development builds use Google test ads until production IDs are configured.
 
 The random generator does not use draw history. In a fair lottery, every valid combination has the same theoretical chance. The app never treats a historical check as official prize validation. It is intended only for adults aged 18 and older; play responsibly.
 
@@ -73,6 +73,8 @@ EXPO_PUBLIC_ADMOB_BANNER_BOTTOM_ANDROID_ID
 EXPO_PUBLIC_ADMOB_NATIVE_RESULTS_ANDROID_ID
 EXPO_PUBLIC_ADMOB_NATIVE_HISTORY_ANDROID_ID
 EXPO_PUBLIC_ADMOB_ANALYSIS_INTERSTITIAL_ANDROID_ID
+EXPO_PUBLIC_ADMOB_ANALYSIS_RANDOM_COMBINATION_INTERSTITIAL_ANDROID_ID
+EXPO_PUBLIC_ADMOB_PICK_RANDOM_COMBINATION_INTERSTITIAL_ANDROID_ID
 ```
 
 Equivalent `_IOS_ID` variables are supported. Generic top, bottom, results, and history fallbacks are also supported where documented in the ad components. The app requests UMP consent before native ad requests. A verified ad-free entitlement hides every placement.

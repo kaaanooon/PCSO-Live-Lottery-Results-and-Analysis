@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { ActionButton } from '@/components/action-button';
+import { useGenerationInterstitial } from '@/components/ads/generation-interstitial';
 import {
   DrawScatterChart,
   DrawTotalsAreaChart,
@@ -377,6 +378,7 @@ function RandomFinding({
   draws: readonly LotteryDraw[];
 }) {
   const { colors } = useAppTheme();
+  const { runBeforeGeneration } = useGenerationInterstitial('analysis');
   const { rule } = analysis;
   const [numbers, setNumbers] = useState(() => generateRandomCombination(rule));
   const [commentary, setCommentary] = useState(() =>
@@ -384,26 +386,38 @@ function RandomFinding({
   );
   const [isGenerating, setIsGenerating] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const generationInFlight = useRef(false);
+  const generationRequest = useRef(0);
 
   useEffect(
     () => () => {
+      generationRequest.current += 1;
+      generationInFlight.current = false;
       if (timer.current) clearTimeout(timer.current);
     },
     [],
   );
 
   const generate = () => {
-    if (isGenerating) return;
+    if (generationInFlight.current) return;
+    generationInFlight.current = true;
+    const request = generationRequest.current + 1;
+    generationRequest.current = request;
     setIsGenerating(true);
-    timer.current = setTimeout(() => {
-      const next = generateRandomCombination(rule);
-      setNumbers(next);
-      setCommentary((current) =>
-        describeRandomCombination(next, rule, draws, current),
-      );
-      setIsGenerating(false);
-      timer.current = null;
-    }, 650);
+    runBeforeGeneration(() => {
+      if (request !== generationRequest.current) return;
+      timer.current = setTimeout(() => {
+        if (request !== generationRequest.current) return;
+        const next = generateRandomCombination(rule);
+        setNumbers(next);
+        setCommentary((current) =>
+          describeRandomCombination(next, rule, draws, current),
+        );
+        generationInFlight.current = false;
+        setIsGenerating(false);
+        timer.current = null;
+      }, 650);
+    });
   };
 
   return (

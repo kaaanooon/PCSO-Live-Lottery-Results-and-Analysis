@@ -1,12 +1,7 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform } from 'react-native';
-import {
-  AdEventType,
-  InterstitialAd,
-  TestIds,
-} from 'react-native-google-mobile-ads';
+import { TestIds } from 'react-native-google-mobile-ads';
 
-import { useAds } from '@/providers/ads-context';
+import { useCountedInterstitial } from '@/components/ads/counted-interstitial.native';
 
 import type { AnalysisInterstitialController } from './analysis-interstitial';
 
@@ -27,68 +22,10 @@ function analysisInterstitialUnitId(): string {
  * actions. Analysis always continues immediately when an ad is unavailable.
  */
 export function useAnalysisInterstitial(): AnalysisInterstitialController {
-  const { adsEnabled } = useAds();
-  const interstitial = useMemo(
-    () => InterstitialAd.createForAdRequest(analysisInterstitialUnitId()),
-    [],
-  );
-  const [loaded, setLoaded] = useState(false);
-  const actionCount = useRef(0);
-  const pendingAnalysis = useRef<(() => void) | null>(null);
-
-  const finishPendingAnalysis = useCallback(() => {
-    const pending = pendingAnalysis.current;
-    pendingAnalysis.current = null;
-    pending?.();
-  }, []);
-
-  useEffect(() => {
-    if (!adsEnabled) {
-      finishPendingAnalysis();
-      return;
-    }
-
-    const unsubscribeLoaded = interstitial.addAdEventListener(AdEventType.LOADED, () => {
-      setLoaded(true);
-    });
-    const unsubscribeClosed = interstitial.addAdEventListener(AdEventType.CLOSED, () => {
-      setLoaded(false);
-      finishPendingAnalysis();
-      interstitial.load();
-    });
-    const unsubscribeError = interstitial.addAdEventListener(AdEventType.ERROR, () => {
-      setLoaded(false);
-      finishPendingAnalysis();
-    });
-
-    interstitial.load();
-    return () => {
-      unsubscribeLoaded();
-      unsubscribeClosed();
-      unsubscribeError();
-      finishPendingAnalysis();
-    };
-  }, [adsEnabled, finishPendingAnalysis, interstitial]);
-
-  const runBeforeAnalysis = useCallback(
-    (analyze: () => void) => {
-      actionCount.current += 1;
-      const shouldShow =
-        adsEnabled &&
-        loaded &&
-        actionCount.current % ACTIONS_PER_INTERSTITIAL === 0;
-
-      if (!shouldShow) {
-        analyze();
-        return;
-      }
-
-      pendingAnalysis.current = analyze;
-      setLoaded(false);
-      void interstitial.show().catch(() => finishPendingAnalysis());
-    },
-    [adsEnabled, finishPendingAnalysis, interstitial, loaded],
-  );
-
-  return { adsEnabled, runBeforeAnalysis };
+  const { adsEnabled, runBeforeAction } = useCountedInterstitial({
+    actionsPerAd: ACTIONS_PER_INTERSTITIAL,
+    placement: 'analysis-draws',
+    unitId: analysisInterstitialUnitId(),
+  });
+  return { adsEnabled, runBeforeAnalysis: runBeforeAction };
 }
