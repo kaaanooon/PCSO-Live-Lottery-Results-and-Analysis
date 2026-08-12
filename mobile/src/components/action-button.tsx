@@ -1,6 +1,12 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import type { ComponentProps } from 'react';
-import { Pressable, StyleSheet, Text, type ViewStyle } from 'react-native';
+import {
+  ActivityIndicator,
+  Pressable,
+  StyleSheet,
+  Text,
+  type ViewStyle,
+} from 'react-native';
 
 import { useAppTheme } from '@/providers/preferences-provider';
 import { radius, spacing } from '@/theme/tokens';
@@ -13,6 +19,7 @@ export function ActionButton({
   icon,
   variant = 'primary',
   disabled = false,
+  loading = false,
   style,
   accessibilityLabel,
 }: {
@@ -21,10 +28,12 @@ export function ActionButton({
   icon?: IconName;
   variant?: 'primary' | 'secondary' | 'danger' | 'ghost';
   disabled?: boolean;
+  loading?: boolean;
   style?: ViewStyle;
   accessibilityLabel?: string;
 }) {
   const { colors } = useAppTheme();
+  const isDisabled = disabled || loading;
   const foreground = variant === 'primary' ? colors.surface : variant === 'danger' ? colors.danger : colors.text;
   const backgroundColor = variant === 'primary'
     ? colors.primary
@@ -43,17 +52,21 @@ export function ActionButton({
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? label}
-      accessibilityState={{ disabled }}
-      disabled={disabled}
+      accessibilityState={{ busy: loading, disabled: isDisabled }}
+      disabled={isDisabled}
       onPress={onPress}
       style={({ pressed }) => [
         styles.base,
         { backgroundColor, borderColor },
-        disabled && styles.disabled,
-        pressed && !disabled && styles.pressed,
+        isDisabled && styles.disabled,
+        pressed && !isDisabled && styles.pressed,
         style,
       ]}>
-      {icon ? <Ionicons name={icon} size={17} color={foreground} /> : null}
+      {loading ? (
+        <ActivityIndicator color={foreground} size="small" />
+      ) : icon ? (
+        <Ionicons name={icon} size={17} color={foreground} />
+      ) : null}
       <Text style={[styles.label, { color: foreground }]}>{label}</Text>
     </Pressable>
   );

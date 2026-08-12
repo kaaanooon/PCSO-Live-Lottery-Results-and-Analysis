@@ -11,6 +11,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type PropsWithChildren,
 } from 'react';
@@ -23,6 +24,7 @@ import {
   type PurchasesContextValue,
   type RestorePurchaseResult,
 } from '@/providers/purchases-context';
+import { EntitlementReconciliation } from '@/providers/entitlement-reconciliation';
 
 const ENTITLEMENT_CACHE_KEY = '@lottolens-ph/entitlements/remove-ads/v1';
 const CONNECTION_GRACE_MS = 5_000;
@@ -60,14 +62,24 @@ export function PurchasesProvider({ children }: PropsWithChildren) {
   const [productChecked, setProductChecked] = useState(false);
   const [status, setStatus] = useState<PurchaseStatus>('loading');
   const [message, setMessage] = useState<string | null>(null);
+  const entitlementOwnedRef = useRef(false);
+  const entitlementWriteRef = useRef<Promise<void>>(Promise.resolve());
+  const purchaseInFlightRef = useRef(false);
+  const reconciliation = useRef(new EntitlementReconciliation()).current;
 
-  const persistEntitlement = useCallback(async (owned: boolean) => {
+  const persistEntitlement = useCallback((owned: boolean): Promise<void> => {
+    entitlementOwnedRef.current = owned;
     setAdsRemoved(owned);
-    try {
-      await AsyncStorage.setItem(ENTITLEMENT_CACHE_KEY, owned ? 'true' : 'false');
-    } catch {
-      // The store remains authoritative even if the offline UI cache cannot be saved.
-    }
+    const write = entitlementWriteRef.current
+      .catch(() => {})
+      .then(() =>
+        AsyncStorage.setItem(ENTITLEMENT_CACHE_KEY, owned ? 'true' : 'false'),
+      )
+      .catch(() => {
+        // The store remains authoritative even if the offline UI cache cannot be saved.
+      });
+    entitlementWriteRef.current = write;
+    return write;
   }, []);
 
   const acknowledgeIfNeeded = useCallback(async (purchase: Purchase) => {
@@ -88,6 +100,9 @@ export function PurchasesProvider({ children }: PropsWithChildren) {
         setStatus('restoring');
         setMessage(null);
       }
+      const capturedRevision = reconciliation.captureRevision();
+      const staleResult = (): RestorePurchaseResult =>
+        entitlementOwnedRef.current ? 'restored' : 'unavailable';
 
       try {
         const purchases = await getAvailablePurchases();
@@ -99,6 +114,7 @@ export function PurchasesProvider({ children }: PropsWithChildren) {
         );
 
         if (ownedPurchase) {
+          reconciliation.confirmStoreOwnership();
           await persistEntitlement(true);
           try {
             await acknowledgeIfNeeded(ownedPurchase);
@@ -113,17 +129,32 @@ export function PurchasesProvider({ children }: PropsWithChildren) {
         }
 
         if (pendingPurchase) {
+          if (!reconciliation.canApplyNegativeResult(capturedRevision)) {
+            return staleResult();
+          }
           await persistEntitlement(false);
+          if (!reconciliation.canApplyNegativeResult(capturedRevision)) {
+            return staleResult();
+          }
           setStatus('pending');
           setMessage('Payment is pending. Ads will be removed after Google Play confirms it.');
           return 'not-found';
         }
 
+        if (!reconciliation.canApplyNegativeResult(capturedRevision)) {
+          return staleResult();
+        }
         await persistEntitlement(false);
+        if (!reconciliation.canApplyNegativeResult(capturedRevision)) {
+          return staleResult();
+        }
         setStatus('available');
         setMessage(manual ? 'No previous ad-free purchase was found for this Google account.' : null);
         return 'not-found';
       } catch {
+        if (!reconciliation.canApplyNegativeResult(capturedRevision)) {
+          return staleResult();
+        }
         setStatus('unavailable');
         setMessage(
           manual
@@ -136,12 +167,13 @@ export function PurchasesProvider({ children }: PropsWithChildren) {
         if (manual) setRestoring(false);
       }
     },
-    [acknowledgeIfNeeded, persistEntitlement],
+    [acknowledgeIfNeeded, persistEntitlement, reconciliation],
   );
 
   const completePurchase = useCallback(
     async (purchase: Purchase) => {
       if (purchase.productId !== REMOVE_ADS_PRODUCT_ID) return;
+      purchaseInFlightRef.current = false;
       setPurchasing(false);
 
       if (purchase.purchaseState === 'pending') {
@@ -161,6 +193,7 @@ export function PurchasesProvider({ children }: PropsWithChildren) {
 
       // Google Play is queried again at launch and resume. The local value is only an
       // offline UI cache; it is never granted from the old free preference.
+      reconciliation.confirmPurchase();
       await persistEntitlement(true);
       setReady(true);
       setStatus('purchased');
@@ -174,11 +207,12 @@ export function PurchasesProvider({ children }: PropsWithChildren) {
         );
       }
     },
-    [acknowledgeIfNeeded, persistEntitlement],
+    [acknowledgeIfNeeded, persistEntitlement, reconciliation],
   );
 
   const handlePurchaseError = useCallback(
     (error: ExpoPurchaseError) => {
+      purchaseInFlightRef.current = false;
       setPurchasing(false);
 
       if (error.code === ErrorCode.UserCancelled) {
@@ -228,7 +262,11 @@ export function PurchasesProvider({ children }: PropsWithChildren) {
     let active = true;
     void AsyncStorage.getItem(ENTITLEMENT_CACHE_KEY)
       .then((cached) => {
-        if (active) setAdsRemoved(cached === 'true');
+        if (active) {
+          const owned = cached === 'true';
+          entitlementOwnedRef.current = owned;
+          setAdsRemoved(owned);
+        }
       })
       .catch(() => {})
       .finally(() => {
@@ -272,26 +310,31 @@ export function PurchasesProvider({ children }: PropsWithChildren) {
   useEffect(() => {
     if (!connected) return;
     const subscription = AppState.addEventListener('change', (nextState) => {
-      if (nextState === 'active') void syncEntitlement(false);
+      if (nextState === 'active' && !purchaseInFlightRef.current) {
+        void syncEntitlement(false);
+      }
     });
     return () => subscription.remove();
   }, [connected, syncEntitlement]);
 
   const purchaseRemoveAds = useCallback(async () => {
-    if (adsRemoved || purchasing) return;
-    setMessage(null);
-
-    const storeConnected = connected || (await reconnect());
-    if (!storeConnected) {
-      setReady(true);
-      setStatus('unavailable');
-      setMessage('Google Play Billing is unavailable. Open the Play Store and try again.');
-      return;
-    }
-
+    if (adsRemoved || purchaseInFlightRef.current) return;
+    purchaseInFlightRef.current = true;
     setPurchasing(true);
     setStatus('purchasing');
+    setMessage(null);
+
     try {
+      const storeConnected = connected || (await reconnect());
+      if (!storeConnected) {
+        purchaseInFlightRef.current = false;
+        setPurchasing(false);
+        setReady(true);
+        setStatus('unavailable');
+        setMessage('Google Play Billing is unavailable. Open the Play Store and try again.');
+        return;
+      }
+
       await requestPurchase({
         request: {
           apple: { sku: REMOVE_ADS_PRODUCT_ID, quantity: 1 },
@@ -302,7 +345,7 @@ export function PurchasesProvider({ children }: PropsWithChildren) {
     } catch (error) {
       handlePurchaseError(error as ExpoPurchaseError);
     }
-  }, [adsRemoved, connected, handlePurchaseError, purchasing, reconnect, requestPurchase]);
+  }, [adsRemoved, connected, handlePurchaseError, reconnect, requestPurchase]);
 
   const restoreRemoveAds = useCallback(async (): Promise<RestorePurchaseResult> => {
     if (restoring) return adsRemoved ? 'restored' : 'unavailable';

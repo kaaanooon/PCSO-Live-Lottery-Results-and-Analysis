@@ -1,5 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useMemo, useState, type ComponentProps } from 'react';
+import { useEffect, useMemo, useRef, useState, type ComponentProps } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { ActionButton } from '@/components/action-button';
@@ -25,6 +25,7 @@ import { useAppTheme } from '@/providers/preferences-provider';
 import { radius, spacing } from '@/theme/tokens';
 
 type IconName = ComponentProps<typeof Ionicons>['name'];
+const ANALYSIS_REVEAL_DELAY_MS = 850;
 
 function FindingButton({
   title,
@@ -74,6 +75,10 @@ export default function AnalysisScreen() {
   const [gameCode, setGameCode] = useState<LogicalGameCode>('UL58');
   const [slot, setSlot] = useState<AnalysisSlot>('ALL');
   const [hasAnalyzed, setHasAnalyzed] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const analysisTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const analysisInFlight = useRef(false);
+  const analysisRequest = useRef(0);
 
   const rule = GAME_BY_CODE[gameCode];
   const selectedDraws = useMemo(
@@ -84,19 +89,56 @@ export default function AnalysisScreen() {
   const firstDraw = selectedDraws[0];
   const lastDraw = selectedDraws.at(-1);
 
+  const resetAnalysis = () => {
+    analysisRequest.current += 1;
+    analysisInFlight.current = false;
+    if (analysisTimer.current) {
+      clearTimeout(analysisTimer.current);
+      analysisTimer.current = null;
+    }
+    setIsAnalyzing(false);
+    setHasAnalyzed(false);
+  };
+
+  useEffect(
+    () => () => {
+      analysisRequest.current += 1;
+      analysisInFlight.current = false;
+      if (analysisTimer.current) clearTimeout(analysisTimer.current);
+    },
+    [],
+  );
+
   const changeGame = (nextGame: LogicalGameCode) => {
     setGameCode(nextGame);
     setSlot('ALL');
-    setHasAnalyzed(false);
+    resetAnalysis();
   };
 
   const changeSlot = (nextSlot: AnalysisSlot) => {
     setSlot(nextSlot);
-    setHasAnalyzed(false);
+    resetAnalysis();
   };
 
   const analyze = () => {
-    runBeforeAnalysis(() => setHasAnalyzed(true));
+    if (analysisInFlight.current || selectedDraws.length === 0) return;
+
+    analysisInFlight.current = true;
+    const request = analysisRequest.current + 1;
+    analysisRequest.current = request;
+    setHasAnalyzed(false);
+    setIsAnalyzing(true);
+
+    runBeforeAnalysis(() => {
+      if (request !== analysisRequest.current) return;
+      analysisTimer.current = setTimeout(() => {
+        if (request !== analysisRequest.current) return;
+        analysisTimer.current = null;
+        analysisInFlight.current = false;
+        setIsAnalyzing(false);
+        setHasAnalyzed(true);
+      }, ANALYSIS_REVEAL_DELAY_MS);
+    });
   };
 
   const openFinding = (finding: AnalysisFinding) => {
@@ -127,7 +169,12 @@ export default function AnalysisScreen() {
         <ActionButton
           disabled={selectedDraws.length === 0}
           icon="analytics"
-          label={'Analyze latest ' + ANALYSIS_DRAW_COUNT + ' draws'}
+          label={
+            isAnalyzing
+              ? 'Analyzing...'
+              : 'Analyze latest ' + ANALYSIS_DRAW_COUNT + ' draws'
+          }
+          loading={isAnalyzing}
           onPress={analyze}
         />
         {adsEnabled ? (

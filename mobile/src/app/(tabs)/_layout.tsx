@@ -39,7 +39,8 @@ export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
-        freezeOnBlur: true,
+        // Entitlement changes must reach every mounted tab so native ads unmount at once.
+        freezeOnBlur: false,
         headerShown: false,
         sceneStyle: { backgroundColor: colors.background },
         tabBarActiveTintColor: colors.primary,
